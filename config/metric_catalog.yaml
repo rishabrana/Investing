@@ -1,0 +1,298 @@
+metrics:
+  margin_of_safety:
+    display_name: "Margin of Safety"
+    end_user_definition: |
+      Compares what the business is really worth to what the market is charging, highlighting the discount (or lack of it) embedded in today's price.
+    technical_definition: |
+      Intrinsic value is estimated by discounting projected free cash flows plus a terminal value:
+        intrinsic_value = sum_{t=1..n}(projected_fcf_t / (1 + discount_rate)^t) + terminal_value / (1 + discount_rate)^n
+        terminal_value = projected_fcf_n * (1 + terminal_growth) / (discount_rate - terminal_growth)
+      Margin of safety compares that intrinsic value to the current market price:
+        margin_of_safety = 1 - (market_price / intrinsic_value)
+      market_price is the latest close price.
+    data_points:
+      - price.close
+      - projections.projected_fcf[]
+      - assumptions.discount_rate
+      - assumptions.terminal_growth
+      - assumptions.projection_years
+
+  free_cash_flow:
+    display_name: "Free Cash Flow"
+    end_user_definition: |
+      Shows how much cash the business generates after keeping its assets in shape—cash that can pay down debt, pay dividends, or be reinvested.
+    technical_definition: |
+      Free cash flow equals operating cash flow minus capital expenditures:
+        free_cash_flow = operating_cash_flow - capital_expenditure
+    data_points:
+      - financials.operating_cash_flow
+      - financials.capital_expenditure
+
+  return_on_invested_capital:
+    display_name: "Return on Invested Capital (ROIC)"
+    end_user_definition: |
+      Measures how effectively management turns all long-term capital—debt and equity—into operating profit after tax.
+    technical_definition: |
+      NOPAT is operating profit after tax:
+        nopat = ebit * (1 - effective_tax_rate)
+        effective_tax_rate = income_tax_expense / pre_tax_income  (guard against divide-by-zero)
+      Invested capital for each period:
+        invested_capital_t = total_debt_t + shareholders_equity_t - cash_and_equivalents_t
+      Average invested capital smooths beginning and ending balances:
+        average_invested_capital = (invested_capital_begin + invested_capital_end) / 2
+      Return on invested capital:
+        roic = nopat / average_invested_capital
+    data_points:
+      - financials.ebit
+      - financials.income_tax_expense
+      - financials.pre_tax_income
+      - financials.total_debt
+      - financials.shareholders_equity
+      - financials.cash_and_equivalents
+      - financials_history[1].total_debt
+      - financials_history[1].shareholders_equity
+      - financials_history[1].cash_and_equivalents
+
+  return_on_equity:
+    display_name: "Return on Equity (ROE)"
+    end_user_definition: |
+      Reveals how efficiently the company turns shareholder capital into bottom-line profit.
+    technical_definition: |
+      Average equity smooths volatility:
+        average_equity = (shareholders_equity_begin + shareholders_equity_end) / 2
+      Return on equity:
+        roe = net_income / average_equity
+    data_points:
+      - financials.net_income
+      - financials.shareholders_equity
+      - financials_history[1].shareholders_equity
+
+  debt_to_equity_and_interest_coverage:
+    display_name: "Debt-to-Equity & Interest Coverage"
+    end_user_definition: |
+      Gauges balance sheet leverage and the company's ability to cover interest payments—key signals of financial resilience.
+    technical_definition: |
+      Debt-to-equity compares total liabilities (or total debt) to shareholder equity:
+        debt_to_equity = total_liabilities / shareholders_equity
+      Interest coverage shows how many times operating profit can cover interest expense:
+        interest_coverage = ebit / interest_expense
+    data_points:
+      - financials.total_liabilities
+      - financials.shareholders_equity
+      - financials.ebit
+      - financials.interest_expense
+
+  eps_growth:
+    display_name: "Earnings Per Share Growth"
+    end_user_definition: |
+      Tracks how quickly earnings per share compound over time—a proxy for the business's growth engine.
+    technical_definition: |
+      Use reported EPS series when available; otherwise derive from net income and diluted shares outstanding:
+        eps_t = net_income_t / diluted_shares_outstanding_t
+      Use diluted shares to account for potential dilution from options, warrants, and convertibles.
+      Compound annual growth rate over N years:
+        eps_cagr = (eps_latest / eps_base)^(1 / years) - 1
+    data_points:
+      - metrics_history[].eps
+      - financials_history[].net_income
+      - financials_history[].shares_outstanding
+
+  book_value_per_share_growth:
+    display_name: "Book Value Per Share Growth"
+    end_user_definition: |
+      Indicates how effectively retained earnings are compounding tangible net worth for shareholders.
+    technical_definition: |
+      Book value per share:
+        bvps_t = shareholders_equity_t / shares_outstanding_t
+      Growth measured as compound annual growth:
+        bvps_cagr = (bvps_latest / bvps_base)^(1 / years) - 1
+    data_points:
+      - financials_history[].shareholders_equity
+      - financials_history[].shares_outstanding
+
+  price_to_earnings:
+    display_name: "Price-to-Earnings Ratio (P/E)"
+    end_user_definition: |
+      Shows how many dollars investors are willing to pay today for each dollar of trailing earnings.
+    technical_definition: |
+      Trailing P/E uses the latest closing price and trailing twelve months EPS:
+        pe = market_price / ttm_eps
+    data_points:
+      - price.close
+      - metrics.ttm_eps
+
+  price_to_book:
+    display_name: "Price-to-Book Ratio (P/B)"
+    end_user_definition: |
+      Compares the market price to the accounting value of equity—useful for asset-heavy businesses.
+    technical_definition: |
+      Price-to-book leverages book value per share:
+        pb = market_price / book_value_per_share
+        book_value_per_share = shareholders_equity / shares_outstanding
+    data_points:
+      - price.close
+      - financials.shareholders_equity
+      - financials.shares_outstanding
+
+  ev_to_ebitda:
+    display_name: "Enterprise Value / EBITDA"
+    end_user_definition: |
+      Evaluates the company's valuation independent of capital structure by comparing enterprise value to operating cash earnings.
+    technical_definition: |
+      Enterprise value adjusts market cap for debt and cash:
+        enterprise_value = market_cap + total_debt - cash_and_equivalents
+      EBITDA-based multiple:
+        ev_to_ebitda = enterprise_value / ebitda
+    data_points:
+      - market_data.market_cap
+      - financials.total_debt
+      - financials.cash_and_equivalents
+      - financials.ebitda
+
+  peg_ratio:
+    display_name: "PEG Ratio"
+    end_user_definition: |
+      Blends valuation and growth by dividing the P/E ratio by the expected earnings growth rate.
+    technical_definition: |
+      peg = pe / eps_growth_rate
+      eps_growth_rate should be expressed as a percentage (e.g., 12 for 12%, not 0.12).
+    data_points:
+      - metrics.pe
+      - metrics.eps_growth_rate
+
+  operating_and_net_margin:
+    display_name: "Operating Margin & Net Margin"
+    end_user_definition: |
+      Tests profit quality—first at the operating level and then after all expenses, taxes, and interest.
+    technical_definition: |
+      Operating margin isolates core operating profitability:
+        operating_margin = operating_income / revenue
+      Net margin captures bottom-line efficiency:
+        net_margin = net_income / revenue
+    data_points:
+      - financials.operating_income
+      - financials.net_income
+      - financials.revenue
+
+  owner_earnings:
+    display_name: "Owner Earnings"
+    end_user_definition: |
+      Buffett's preferred cash-flow proxy—approximates the cash truly available to owners after sustaining the business.
+    technical_definition: |
+      Owner earnings adjust net income for non-cash charges and maintenance capital needs:
+        owner_earnings = net_income + depreciation_amortization + other_non_cash_charges - capital_expenditure
+      other_non_cash_charges typically includes stock-based compensation, impairments, restructuring charges, and other non-cash items.
+    data_points:
+      - financials.net_income
+      - financials.depreciation_amortization
+      - financials.other_non_cash_charges
+      - financials.capital_expenditure
+
+  return_on_retained_earnings:
+    display_name: "Management Return on Retained Earnings"
+    end_user_definition: |
+      Evaluates how effectively management reinvests profits by comparing value created to earnings kept in the business—Buffett's "$1 test."
+    technical_definition: |
+      Earnings retained over the measurement period:
+        earnings_retained = retained_earnings_end - retained_earnings_begin
+      Value created measured by increase in book value (more conservative than market cap):
+        value_created = (shareholders_equity_end - shareholders_equity_begin) - earnings_retained
+      Alternative market-based approach (more volatile):
+        value_created_market = (market_cap_end - market_cap_begin) + dividends_paid
+      Return on retained earnings:
+        return_on_retained = value_created / earnings_retained
+      Note: Book value method isolates management's reinvestment effectiveness; market method includes sentiment.
+    data_points:
+      - financials.retained_earnings
+      - financials_history[1].retained_earnings
+      - financials.shareholders_equity
+      - financials_history[1].shareholders_equity
+      - market_data.market_cap
+      - market_data_history[1].market_cap
+      - cash_flow.dividends_paid
+
+  economic_moat_score:
+    display_name: "Economic Moat Indicators"
+    end_user_definition: |
+      Synthesizes signals such as margin stability, ROIC durability, and revenue stickiness to label the company's competitive advantage.
+    technical_definition: |
+      Construct a rules-based scorecard:
+        margin_stability = 1 - (std_dev(gross_margin_5y) / mean(gross_margin_5y))
+        roic_trend = slope(roic_history)
+        revenue_cagr = (revenue_latest / revenue_base)^(1 / years) - 1
+      Weighted composite maps to qualitative moat categories (e.g., wide, narrow, none) using configurable thresholds.
+    data_points:
+      - financials_history[].gross_margin
+      - metrics_history[].roic
+      - financials_history[].revenue
+      - qualitative.indicators (optional)
+
+  consistency_score:
+    display_name: "Consistency of Performance"
+    end_user_definition: |
+      Rewards companies that deliver steady profitability and cash generation year after year.
+    technical_definition: |
+      Calculate normalized volatility across key metrics:
+        volatility = average_normalized_std_dev([roic_history, roe_history, operating_margin_history, fcf_history])
+      Convert volatility into a consistency score:
+        consistency_score = 1 - volatility
+      Classify score into qualitative buckets using configured cutoffs.
+    data_points:
+      - metrics_history[].roic
+      - metrics_history[].roe
+      - financials_history[].operating_margin
+      - cash_flow_history[].free_cash_flow
+
+  capital_expenditure_ratio:
+    display_name: "Capital Expenditure Ratio"
+    end_user_definition: |
+      Shows how much of operating cash flow is being plowed back into the business—lower ratios often indicate capital efficiency.
+    technical_definition: |
+      capex_ratio = capital_expenditure / operating_cash_flow
+      Interpret with care when operating cash flow is negative.
+    data_points:
+      - financials.capital_expenditure
+      - financials.operating_cash_flow
+
+  dividend_yield_and_payout_ratio:
+    display_name: "Dividend Yield & Payout Ratio"
+    end_user_definition: |
+      Examines the cash return to shareholders and whether it is supported by earnings power.
+    technical_definition: |
+      Dividend yield relates dividends per share to the current price:
+        dividend_yield = annual_dividend_per_share / market_price
+      Payout ratio compares total dividends to net income:
+        payout_ratio = dividends_paid / net_income
+    data_points:
+      - cash_flow.annual_dividend_per_share
+      - price.close
+      - cash_flow.dividends_paid
+      - financials.net_income
+
+  wacc_vs_roic_spread:
+    display_name: "WACC vs ROIC Spread"
+    end_user_definition: |
+      Highlights whether the company is creating value by earning returns above its cost of capital.
+    technical_definition: |
+      spread = roic - wacc
+      Positive spreads indicate value creation; negative spreads signal value destruction.
+    data_points:
+      - metrics.roic
+      - assumptions.wacc
+
+  ten_year_average_roce:
+    display_name: "Ten-Year Average ROCE"
+    end_user_definition: |
+      Smooths out cycles by averaging the return on capital employed across a full decade.
+    technical_definition: |
+      Capital employed represents long-term capital invested in the business:
+        capital_employed_t = total_assets_t - current_liabilities_t
+      Alternatively: capital_employed_t = shareholders_equity_t + non_current_liabilities_t
+      Annual ROCE:
+        roce_t = ebit_t / capital_employed_t
+      Ten-year average:
+        average_roce = mean(roce_t for each year in trailing_10_years)
+    data_points:
+      - financials_history[].ebit
+      - financials_history[].total_assets
+      - financials_history[].current_liabilities
