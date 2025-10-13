@@ -9,6 +9,7 @@ import json
 import sys
 from typing import Optional, Tuple, List
 
+from clients import PolygonClient
 from services import DataIngestionService, DataSourceRouter, Normalizer
 from storage.json_store import (
     API_ENV_MAP,
@@ -98,7 +99,16 @@ def cmd_run(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
 
-    router = DataSourceRouter()
+    clients = {}
+    polygon_key = store.get_api_key("polygon.io")
+    if polygon_key:
+        try:
+            clients["polygon.io"] = PolygonClient(polygon_key)
+        except ValueError as exc:  # pragma: no cover
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+
+    router = DataSourceRouter(clients=clients)
     normalizer = Normalizer()
     service = DataIngestionService(
         json_store=store,

@@ -1,0 +1,51 @@
+{
+  "ticker": "AAPL",
+  "as_of": "2025-10-13",
+  "fetched_at": "2025-10-13T03:01:50.298684",
+  "price": {
+    "open": 254.94,
+    "high": 256.38,
+    "low": 244,
+    "close": 245.27
+  },
+  "financials": {},
+  "market_data": {
+    "market_cap": 3639902455300.0,
+    "shares_outstanding": 14840390000
+  },
+  "cash_flow": {},
+  "assumptions": {},
+  "source_metadata": {
+    "price.open": {
+      "provider": "polygon.io",
+      "timestamp": 1,
+      "endpoint": "/v2/aggs/ticker/{ticker}/prev"
+    },
+    "price.high": {
+      "provider": "polygon.io",
+      "timestamp": 1,
+      "endpoint": "/v2/aggs/ticker/{ticker}/prev"
+    },
+    "price.low": {
+      "provider": "polygon.io",
+      "timestamp": 1,
+      "endpoint": "/v2/aggs/ticker/{ticker}/prev"
+    },
+    "price.close": {
+      "provider": "polygon.io",
+      "timestamp": 1,
+      "endpoint": "/v2/aggs/ticker/{ticker}/prev"
+    },
+    "market_data.market_cap": {
+      "provider": "polygon.io",
+      "timestamp": null,
+      "endpoint": "/v3/reference/tickers/{ticker}"
+    },
+    "market_data.shares_outstanding": {
+      "provider": "polygon.io",
+      "timestamp": null,
+      "endpoint": "/v3/reference/tickers/{ticker}"
+    }
+  },
+  "raw_payloads": {}
+}

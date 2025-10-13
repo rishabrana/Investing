@@ -84,7 +84,6 @@ class DataIngestionService:
             "financials.total_assets",
             "financials.current_assets",
             "financials.current_liabilities",
-            "financials.retained_earnings",
             # Income statement
             "financials.revenue",
             "financials.net_income",
@@ -96,15 +95,10 @@ class DataIngestionService:
             "financials.depreciation_amortization",
             "financials.ebit",
             "financials.ebitda",
-            "metrics.ttm_eps",
             # Cash flow
             "financials.operating_cash_flow",
             "financials.capital_expenditure",
             "cash_flow.dividends_paid",
-            # Assumptions (for WACC calculation)
-            "assumptions.beta",
-            "assumptions.risk_free_rate",
-            "assumptions.market_risk_premium",
         }
 
     def refresh_ticker(

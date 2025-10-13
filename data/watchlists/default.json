@@ -2,12 +2,12 @@
   "default_metrics_profile": "buffett_core",
   "tickers": [
     {
-      "symbol": "APPL",
-      "name": "APPL"
+      "symbol": "AAPL",
+      "name": "Apple Inc."
     },
     {
       "symbol": "MSFT",
-      "name": "MSFT"
+      "name": "Microsoft Corporation"
     }
   ]
 }

@@ -127,20 +127,16 @@ class DataSourceRouter:
             source_metadata={}
         )
 
-        # Group fields by provider and endpoint for batching
         batches = self._plan_batches(fields)
 
-        # Execute batches
-        for provider, endpoint_batches in batches.items():
-            for endpoint, field_ids in endpoint_batches.items():
-                self._fetch_batch(
-                    ticker=ticker,
-                    provider=provider,
-                    endpoint=endpoint,
-                    field_ids=field_ids,
-                    period=period,
-                    response=response
-                )
+        for provider, field_ids in batches.items():
+            self._fetch_provider_batch(
+                ticker=ticker,
+                provider=provider,
+                field_ids=field_ids,
+                period=period,
+                response=response,
+            )
 
         # Handle missing fields with fallbacks
         still_missing = fields - response.fields_fetched
@@ -169,19 +165,19 @@ class DataSourceRouter:
     def _plan_batches(
         self,
         fields: Set[str]
-    ) -> Dict[str, Dict[str, List[str]]]:
+    ) -> Dict[str, Set[str]]:
         """
         Plan optimal API call batches.
 
-        Groups fields by provider and endpoint to minimize HTTP calls.
+        Groups fields by provider to minimize HTTP calls.
 
         Args:
             fields: Set of field IDs
 
         Returns:
-            Dict[provider][endpoint] -> list of field IDs
+            Dict[provider] -> set of field IDs
         """
-        batches: Dict[str, Dict[str, List[str]]] = {}
+        batches: Dict[str, Set[str]] = {}
 
         for field_id in fields:
             mapping = self.get_field_mapping(field_id)
@@ -190,24 +186,16 @@ class DataSourceRouter:
                 continue
 
             provider = mapping.primary
-            endpoint = mapping.endpoint or "default"
-
-            if provider not in batches:
-                batches[provider] = {}
-            if endpoint not in batches[provider]:
-                batches[provider][endpoint] = []
-
-            batches[provider][endpoint].append(field_id)
+            batches.setdefault(provider, set()).add(field_id)
 
         logger.debug(f"Planned {len(batches)} provider batches")
         return batches
 
-    def _fetch_batch(
+    def _fetch_provider_batch(
         self,
         ticker: str,
         provider: str,
-        endpoint: str,
-        field_ids: List[str],
+        field_ids: Set[str],
         period: str,
         response: FetchResponse
     ):
@@ -223,11 +211,9 @@ class DataSourceRouter:
             response: FetchResponse to populate
         """
         logger.debug(
-            f"Fetching batch from {provider}/{endpoint}: "
-            f"{len(field_ids)} fields"
+            f"Fetching batch from {provider}: {len(field_ids)} fields"
         )
 
-        # Check if we have a client for this provider
         client = self.clients.get(provider)
         if not client:
             logger.warning(f"No client configured for provider: {provider}")
@@ -236,14 +222,24 @@ class DataSourceRouter:
             )
             return
 
-        # TODO: Implement actual client calls
-        # For now, this is a placeholder that will be implemented
-        # when we create the actual client classes
+        try:
+            cache_key = (provider, tuple(sorted(field_ids)))
+            cache_entry = self._cache.get(cache_key)
+            if cache_entry:
+                data, source_metadata, fetched, warnings = cache_entry
+            else:
+                data, source_metadata, fetched, warnings = client.fetch_fields(
+                    ticker=ticker,
+                    fields=field_ids,
+                    period=period,
+                )
+                self._cache[cache_key] = (data, source_metadata, fetched, warnings)
 
-        # Placeholder response
-        response.warnings.append(
-            f"Provider {provider} client not yet implemented"
-        )
+            self._merge_response(response, data, source_metadata, fetched, provider)
+            response.warnings.extend(warnings)
+        except Exception as exc:  # pragma: no cover - to surface runtime issues
+            logger.error(f"Provider {provider} fetch failed: {exc}", exc_info=True)
+            response.warnings.append(f"Provider {provider} fetch failed: {exc}")
 
     def _fetch_fallbacks(
         self,
@@ -272,8 +268,13 @@ class DataSourceRouter:
                     f"Trying secondary provider for {field_id}: "
                     f"{mapping.secondary}"
                 )
-                # TODO: Implement fallback fetch
-                pass
+                self._fetch_provider_batch(
+                    ticker=ticker,
+                    provider=mapping.secondary,
+                    field_ids={field_id},
+                    period=period,
+                    response=response,
+                )
 
             # Try tertiary provider
             if mapping.tertiary and field_id not in response.fields_fetched:
@@ -281,8 +282,40 @@ class DataSourceRouter:
                     f"Trying tertiary provider for {field_id}: "
                     f"{mapping.tertiary}"
                 )
-                # TODO: Implement fallback fetch
-                pass
+                self._fetch_provider_batch(
+                    ticker=ticker,
+                    provider=mapping.tertiary,
+                    field_ids={field_id},
+                    period=period,
+                    response=response,
+                )
+
+    def _merge_response(
+        self,
+        response: FetchResponse,
+        data: Dict[str, Any],
+        source_metadata: Dict[str, Any],
+        fetched: Set[str],
+        provider: str,
+    ):
+        """Merge provider data into the aggregated FetchResponse."""
+
+        for section, values in data.items():
+            if not values:
+                continue
+            if section not in response.data:
+                response.data[section] = {}
+            if isinstance(values, dict):
+                response.data[section].update(values)
+            else:
+                response.data[section] = values
+
+        if source_metadata:
+            response.source_metadata.update(source_metadata)
+
+        if fetched:
+            response.fields_fetched.update(fetched)
+            response.providers_used[provider] = response.providers_used.get(provider, 0) + 1
 
 
 # ===== HELPER FUNCTIONS =====

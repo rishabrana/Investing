@@ -5,10 +5,14 @@ Command-line utilities for managing watchlists stored in JsonStore.
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from typing import Optional
 
 from storage.json_store import JsonStore, Watchlist, WatchlistEntry
+from clients.polygon_client import PolygonClient
+
+logger = logging.getLogger(__name__)
 
 
 def get_store(data_dir: Optional[str]) -> JsonStore:
@@ -24,6 +28,32 @@ def load_or_create_watchlist(store: JsonStore, name: str) -> Watchlist:
     if watchlist is None:
         watchlist = Watchlist(tickers=[])
     return watchlist
+
+
+def validate_ticker_symbol(store: JsonStore, symbol: str) -> tuple[bool, str, str]:
+    """
+    Validate ticker symbol using Polygon API.
+
+    Args:
+        store: JsonStore instance to get API key
+        symbol: Ticker symbol to validate
+
+    Returns:
+        Tuple of (is_valid, company_name, error_message)
+    """
+    # Try to get Polygon API key
+    api_key = store.get_api_key("polygon.io")
+    if not api_key:
+        logger.warning("No Polygon API key found, skipping validation")
+        return True, "", ""  # Skip validation if no key available
+
+    try:
+        client = PolygonClient(api_key)
+        return client.validate_ticker(symbol)
+    except Exception as e:
+        logger.error(f"Ticker validation failed: {e}")
+        # Don't block user if validation service fails
+        return True, "", ""
 
 
 def cmd_list(args: argparse.Namespace) -> int:
@@ -57,9 +87,23 @@ def cmd_add(args: argparse.Namespace) -> int:
         print(f"{symbol} is already in watchlist '{args.name}'.")
         return 1
 
+    # Validate ticker if not skipped
+    company_name = args.company or symbol
+    if not args.skip_validation:
+        is_valid, validated_name, error = validate_ticker_symbol(store, symbol)
+        if not is_valid:
+            print(f"Error: {error}")
+            print(f"Use --skip-validation to add anyway.")
+            return 1
+
+        # Use validated company name if user didn't provide one
+        if not args.company and validated_name:
+            company_name = validated_name
+            print(f"Validated: {symbol} - {company_name}")
+
     entry = WatchlistEntry(
         symbol=symbol,
-        name=args.company or symbol,
+        name=company_name,
         notes=args.notes,
         metrics_profile=args.profile,
         custom_fields={}
@@ -122,6 +166,11 @@ def build_parser() -> argparse.ArgumentParser:
     add_parser.add_argument(
         "--default-profile",
         help="Optional default profile for the watchlist (updates on save)",
+    )
+    add_parser.add_argument(
+        "--skip-validation",
+        action="store_true",
+        help="Skip ticker symbol validation (useful if API is unavailable)",
     )
     add_parser.set_defaults(func=cmd_add)
 

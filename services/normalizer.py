@@ -130,14 +130,22 @@ class Normalizer:
         self._calculate_derived_fields(normalized)
 
         # Convert source metadata
-        normalized['source_metadata'] = {
-            field_id: {
-                'provider': meta.provider,
-                'timestamp': meta.timestamp,
-                'endpoint': meta.endpoint
-            }
-            for field_id, meta in source_metadata.items()
-        }
+        normalized['source_metadata'] = {}
+        for field_id, meta in source_metadata.items():
+            # Handle both dict and SourceMetadata object types
+            if isinstance(meta, dict):
+                normalized['source_metadata'][field_id] = {
+                    'provider': meta.get('provider'),
+                    'timestamp': meta.get('timestamp'),
+                    'endpoint': meta.get('endpoint')
+                }
+            else:
+                # SourceMetadata object
+                normalized['source_metadata'][field_id] = {
+                    'provider': meta.provider,
+                    'timestamp': meta.timestamp,
+                    'endpoint': meta.endpoint
+                }
 
         return normalized
 
