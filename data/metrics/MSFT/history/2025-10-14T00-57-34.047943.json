@@ -1,0 +1,52 @@
+{
+  "ticker": "MSFT",
+  "as_of": "2025-10-14",
+  "calculated_at": "2025-10-14T00:57:34.047943",
+  "profile_used": "buffett_core",
+  "valuation": {
+    "price_to_earnings": 37.522774541646534,
+    "price_to_book": 11.12446227316648,
+    "ev_to_ebitda": 23.793960559509504
+  },
+  "profitability": {
+    "return_on_invested_capital": 0.29706098731461084,
+    "return_on_equity": 0.2964722734140952,
+    "operating_and_net_margin": {
+      "operating_margin": 0.4562195624085985,
+      "net_margin": 0.3614601524896707
+    }
+  },
+  "cash_generation": {
+    "free_cash_flow": 71611000000.0,
+    "owner_earnings": 71434000000.0,
+    "capital_expenditure_ratio": 0.47407499889837107
+  },
+  "financial_strength": {
+    "debt_to_equity_and_interest_coverage": {
+      "debt_to_equity": 0.8021567548525529,
+      "interest_coverage": 53.89014675052411
+    }
+  },
+  "capital_allocation": {
+    "dividend_yield_and_payout_ratio": {
+      "dividend_yield": 0.00630250697095952,
+      "payout_ratio": 0.23648754811846964
+    }
+  },
+  "moat": null,
+  "metrics_included": [
+    "free_cash_flow",
+    "return_on_invested_capital",
+    "return_on_equity",
+    "operating_and_net_margin",
+    "owner_earnings",
+    "debt_to_equity_and_interest_coverage",
+    "capital_expenditure_ratio",
+    "price_to_earnings",
+    "price_to_book",
+    "ev_to_ebitda",
+    "dividend_yield_and_payout_ratio"
+  ],
+  "notes": [],
+  "warnings": null
+}

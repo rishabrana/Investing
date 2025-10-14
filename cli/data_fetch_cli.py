@@ -9,7 +9,7 @@ import json
 import sys
 from typing import Optional, Tuple, List
 
-from clients import PolygonClient
+from clients import PolygonClient, AlphaVantageClient, YahooFinanceClient
 from services import DataIngestionService, DataSourceRouter, Normalizer
 from storage.json_store import (
     API_ENV_MAP,
@@ -100,6 +100,8 @@ def cmd_run(args: argparse.Namespace) -> int:
             )
 
     clients = {}
+
+    # Initialize Polygon client
     polygon_key = store.get_api_key("polygon.io")
     if polygon_key:
         try:
@@ -107,6 +109,20 @@ def cmd_run(args: argparse.Namespace) -> int:
         except ValueError as exc:  # pragma: no cover
             print(f"ERROR: {exc}", file=sys.stderr)
             return 1
+
+    # Initialize Alpha Vantage client
+    alpha_vantage_key = store.get_api_key("alpha_vantage")
+    if alpha_vantage_key:
+        try:
+            clients["alpha_vantage"] = AlphaVantageClient(alpha_vantage_key)
+        except ValueError as exc:  # pragma: no cover
+            print(f"Warning: {exc}", file=sys.stderr)
+
+    # Initialize Yahoo Finance client (no API key required)
+    try:
+        clients["yahoo_finance"] = YahooFinanceClient()
+    except ImportError as exc:
+        print(f"Warning: Yahoo Finance client unavailable: {exc}", file=sys.stderr)
 
     router = DataSourceRouter(clients=clients)
     normalizer = Normalizer()

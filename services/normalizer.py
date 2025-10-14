@@ -126,6 +126,18 @@ class Normalizer:
             source_metadata
         )
 
+        # Pass through historical data (already normalized by clients)
+        if 'financials_history' in raw_data:
+            normalized['financials_history'] = raw_data['financials_history']
+        if 'market_data_history' in raw_data:
+            normalized['market_data_history'] = raw_data['market_data_history']
+        if 'cash_flow_history' in raw_data:
+            normalized['cash_flow_history'] = raw_data['cash_flow_history']
+        if 'metrics_history' in raw_data:
+            normalized['metrics_history'] = raw_data['metrics_history']
+        if 'projections' in raw_data:
+            normalized['projections'] = raw_data['projections']
+
         # Calculate derived fields
         self._calculate_derived_fields(normalized)
 

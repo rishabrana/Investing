@@ -1,7 +1,7 @@
 {
   "ticker": "AAPL",
   "as_of": "2025-10-14",
-  "fetched_at": "2025-10-14T00:19:58.585053",
+  "fetched_at": "2025-10-14T00:09:58.326960",
   "price": {
     "open": 249.38,
     "high": 249.69,
@@ -26,11 +26,7 @@
     "interest_expense": 0.0,
     "depreciation_amortization": 11445000000.0,
     "ebitda": 134661000000.0,
-    "capital_expenditure": -9447000000.0,
-    "cash_and_equivalents": 29943000000.0,
-    "free_cash_flow": 127701000000.0,
     "pre_tax_income": 123485000000.0,
-    "owner_earnings_simple": 114628000000.0,
     "gross_margin": 0.4620634981523393,
     "operating_margin": 0.31510222870075566,
     "net_margin": 0.23971255769943867
@@ -39,9 +35,7 @@
     "market_cap": 3639902455300.0,
     "shares_outstanding": 14840390000
   },
-  "cash_flow": {
-    "dividends_paid": -15234000000.0
-  },
+  "cash_flow": {},
   "assumptions": {},
   "source_metadata": {
     "price.open": {
@@ -158,21 +152,6 @@
       "provider": "alpha_vantage",
       "timestamp": "2024-09-30",
       "endpoint": "INCOME_STATEMENT"
-    },
-    "cash_flow.dividends_paid": {
-      "provider": "yahoo_finance",
-      "timestamp": "2024-09-30",
-      "endpoint": "cash_flow"
-    },
-    "financials.capital_expenditure": {
-      "provider": "yahoo_finance",
-      "timestamp": "2024-09-30",
-      "endpoint": "cash_flow"
-    },
-    "financials.cash_and_equivalents": {
-      "provider": "yahoo_finance",
-      "timestamp": "2024-09-30",
-      "endpoint": "balance_sheet"
     }
   },
   "raw_payloads": {}

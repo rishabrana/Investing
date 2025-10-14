@@ -1,0 +1,52 @@
+{
+  "ticker": "AAPL",
+  "as_of": "2025-10-14",
+  "calculated_at": "2025-10-14T00:57:34.037883",
+  "profile_used": "buffett_core",
+  "valuation": {
+    "price_to_earnings": 39.20981253093795,
+    "price_to_book": 64.53680399297629,
+    "ev_to_ebitda": 27.525575001670862
+  },
+  "profitability": {
+    "return_on_invested_capital": 0.7563076056901218,
+    "return_on_equity": 1.6459350307287095,
+    "operating_and_net_margin": {
+      "operating_margin": 0.31510222870075566,
+      "net_margin": 0.23971255769943867
+    }
+  },
+  "cash_generation": {
+    "free_cash_flow": 108807000000.0,
+    "owner_earnings": 95734000000.0,
+    "capital_expenditure_ratio": 0.07988736110406414
+  },
+  "financial_strength": {
+    "debt_to_equity_and_interest_coverage": {
+      "debt_to_equity": 5.408779631255487,
+      "interest_coverage": null
+    }
+  },
+  "capital_allocation": {
+    "dividend_yield_and_payout_ratio": {
+      "dividend_yield": 0.004144887700377889,
+      "payout_ratio": 0.16252026969360758
+    }
+  },
+  "moat": null,
+  "metrics_included": [
+    "free_cash_flow",
+    "return_on_invested_capital",
+    "return_on_equity",
+    "operating_and_net_margin",
+    "owner_earnings",
+    "debt_to_equity_and_interest_coverage",
+    "capital_expenditure_ratio",
+    "price_to_earnings",
+    "price_to_book",
+    "ev_to_ebitda",
+    "dividend_yield_and_payout_ratio"
+  ],
+  "notes": [],
+  "warnings": null
+}

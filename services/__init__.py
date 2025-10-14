@@ -5,6 +5,7 @@ This module contains:
 - DataIngestionService: Orchestrates data fetching from APIs
 - DataSourceRouter: Routes requests to appropriate providers
 - Normalizer: Converts provider-specific data to standard format
+- MetricsService: Calculates investment metrics from raw data
 """
 
 from services.data_ingestion import (
@@ -19,6 +20,8 @@ from services.data_source_router import DataSourceRouter, validate_mapping
 from services.field_mapping import FieldMapping
 from services.fetch_response import FetchResponse
 from services.normalizer import Normalizer, validate_normalized_data
+from services.metrics_service import MetricsService
+from services.metric_calculator import MetricCalculator, MetricResult
 
 __all__ = [
     # Data Ingestion
@@ -38,4 +41,9 @@ __all__ = [
     # Normalizer
     'Normalizer',
     'validate_normalized_data',
+
+    # Metrics
+    'MetricsService',
+    'MetricCalculator',
+    'MetricResult',
 ]

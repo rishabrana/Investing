@@ -84,6 +84,7 @@ class DataIngestionService:
             "financials.total_assets",
             "financials.current_assets",
             "financials.current_liabilities",
+            "financials.retained_earnings",
             # Income statement
             "financials.revenue",
             "financials.net_income",
@@ -142,6 +143,11 @@ class DataIngestionService:
                 market_data=normalized.get("market_data"),
                 cash_flow=normalized.get("cash_flow"),
                 assumptions=normalized.get("assumptions"),
+                financials_history=normalized.get("financials_history"),
+                market_data_history=normalized.get("market_data_history"),
+                cash_flow_history=normalized.get("cash_flow_history"),
+                metrics_history=normalized.get("metrics_history"),
+                projections=normalized.get("projections"),
                 source_metadata=normalized.get("source_metadata"),
                 raw_payloads=fetch_response.raw_payloads,
             )

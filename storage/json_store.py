@@ -168,6 +168,13 @@ class RawSnapshot:
     # Assumptions fetched from APIs (beta, risk-free rate, etc.)
     assumptions: Optional[Dict[str, Any]] = None
 
+    # Historical data for time-series metrics
+    financials_history: Optional[List[Dict[str, Any]]] = None
+    market_data_history: Optional[List[Dict[str, Any]]] = None
+    cash_flow_history: Optional[List[Dict[str, Any]]] = None
+    metrics_history: Optional[List[Dict[str, Any]]] = None
+    projections: Optional[Dict[str, Any]] = None  # For DCF calculations
+
     # Source attribution - tracks which provider provided each field
     source_metadata: Optional[Dict[str, SourceMetadata]] = None
 
@@ -715,6 +722,11 @@ def create_raw_snapshot(
     market_data: Optional[Dict] = None,
     cash_flow: Optional[Dict] = None,
     assumptions: Optional[Dict] = None,
+    financials_history: Optional[List[Dict]] = None,
+    market_data_history: Optional[List[Dict]] = None,
+    cash_flow_history: Optional[List[Dict]] = None,
+    metrics_history: Optional[List[Dict]] = None,
+    projections: Optional[Dict] = None,
     source_metadata: Optional[Dict] = None,
     raw_payloads: Optional[Dict] = None
 ) -> RawSnapshot:
@@ -729,6 +741,11 @@ def create_raw_snapshot(
         market_data: Market data (market cap, etc.)
         cash_flow: Cash flow data
         assumptions: Assumptions data (beta, risk-free rate, etc.)
+        financials_history: Historical financial data
+        market_data_history: Historical market data
+        cash_flow_history: Historical cash flow data
+        metrics_history: Historical metrics data
+        projections: Projected cash flows for DCF
         source_metadata: Source attribution
         raw_payloads: Raw API responses
 
@@ -744,6 +761,11 @@ def create_raw_snapshot(
         market_data=market_data,
         cash_flow=cash_flow,
         assumptions=assumptions,
+        financials_history=financials_history,
+        market_data_history=market_data_history,
+        cash_flow_history=cash_flow_history,
+        metrics_history=metrics_history,
+        projections=projections,
         source_metadata=source_metadata,
         raw_payloads=raw_payloads
     )
