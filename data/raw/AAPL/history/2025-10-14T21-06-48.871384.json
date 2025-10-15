@@ -1,0 +1,62 @@
+{
+  "ticker": "AAPL",
+  "as_of": "2025-10-14",
+  "fetched_at": "2025-10-14T21:06:48.871384",
+  "price": {},
+  "financials": {
+    "depreciation_amortization": 11445000000.0,
+    "cash_and_equivalents": 29943000000.0,
+    "retained_earnings": -19154000000.0,
+    "ebitda": 134661000000.0,
+    "capital_expenditure": -9447000000.0,
+    "interest_expense": NaN
+  },
+  "market_data": {},
+  "cash_flow": {
+    "dividends_paid": -15234000000.0
+  },
+  "assumptions": {},
+  "financials_history": null,
+  "market_data_history": null,
+  "cash_flow_history": null,
+  "metrics_history": null,
+  "projections": null,
+  "source_metadata": {
+    "financials.depreciation_amortization": {
+      "provider": "yahoo_finance",
+      "timestamp": "2024-09-30",
+      "endpoint": "income_stmt"
+    },
+    "cash_flow.dividends_paid": {
+      "provider": "yahoo_finance",
+      "timestamp": "2024-09-30",
+      "endpoint": "cash_flow"
+    },
+    "financials.cash_and_equivalents": {
+      "provider": "yahoo_finance",
+      "timestamp": "2024-09-30",
+      "endpoint": "balance_sheet"
+    },
+    "financials.retained_earnings": {
+      "provider": "yahoo_finance",
+      "timestamp": "2024-09-30",
+      "endpoint": "balance_sheet"
+    },
+    "financials.ebitda": {
+      "provider": "yahoo_finance",
+      "timestamp": "2024-09-30",
+      "endpoint": "income_stmt"
+    },
+    "financials.capital_expenditure": {
+      "provider": "yahoo_finance",
+      "timestamp": "2024-09-30",
+      "endpoint": "cash_flow"
+    },
+    "financials.interest_expense": {
+      "provider": "yahoo_finance",
+      "timestamp": "2024-09-30",
+      "endpoint": "income_stmt"
+    }
+  },
+  "raw_payloads": {}
+}

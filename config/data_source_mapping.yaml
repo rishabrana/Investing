@@ -54,7 +54,8 @@ data_sources:
 
   financials.cash_and_equivalents:
     primary: polygon.io
-    secondary: yahoo_finance
+    secondary: alpha_vantage
+    tertiary: yahoo_finance
     endpoint: /vX/reference/financials
     statement: balance_sheet
     field: cash
@@ -212,7 +213,8 @@ data_sources:
 
   financials.capital_expenditure:
     primary: polygon.io
-    secondary: yahoo_finance
+    secondary: alpha_vantage
+    tertiary: yahoo_finance
     endpoint: /vX/reference/financials
     statement: cash_flow
     field: derived_from_investing_activities
@@ -220,7 +222,8 @@ data_sources:
 
   cash_flow.dividends_paid:
     primary: polygon.io
-    secondary: yahoo_finance
+    secondary: alpha_vantage
+    tertiary: yahoo_finance
     endpoint: /vX/reference/financials
     statement: cash_flow
     field: derived_from_financing_activities

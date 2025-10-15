@@ -61,7 +61,14 @@ class AlphaVantageClient:
             ]
         )
         need_balance_sheet = any(
-            f in requested for f in ["financials.retained_earnings"]
+            f in requested for f in ["financials.retained_earnings", "financials.cash_and_equivalents"]
+        )
+        need_cash_flow = any(
+            f in requested
+            for f in [
+                "financials.capital_expenditure",
+                "cash_flow.dividends_paid",
+            ]
         )
 
         try:
@@ -81,6 +88,16 @@ class AlphaVantageClient:
                 )
         except Exception as exc:
             msg = f"Alpha Vantage balance sheet fetch failed for {ticker}: {exc}"
+            logger.warning(msg)
+            warnings.append(msg)
+
+        try:
+            if need_cash_flow:
+                fetched |= self._fetch_cash_flow(
+                    ticker, requested, data, source_metadata
+                )
+        except Exception as exc:
+            msg = f"Alpha Vantage cash flow fetch failed for {ticker}: {exc}"
             logger.warning(msg)
             warnings.append(msg)
 
@@ -170,6 +187,7 @@ class AlphaVantageClient:
 
         mapping = {
             "financials.retained_earnings": report.get("retainedEarnings"),
+            "financials.cash_and_equivalents": report.get("cashAndCashEquivalentsAtCarryingValue"),
         }
 
         fetched: Set[str] = set()
@@ -183,6 +201,49 @@ class AlphaVantageClient:
                         "provider": "alpha_vantage",
                         "timestamp": report.get("fiscalDateEnding"),
                         "endpoint": "BALANCE_SHEET",
+                    }
+                    fetched.add(field)
+                except (ValueError, TypeError):
+                    logger.warning(f"Could not convert {field} value: {value}")
+
+        return fetched
+
+    def _fetch_cash_flow(
+        self,
+        ticker: str,
+        requested: Set[str],
+        data: Dict[str, Any],
+        metadata: Dict[str, Any],
+    ) -> Set[str]:
+        """Fetch cash flow statement data."""
+        payload = self._make_request(
+            {"function": "CASH_FLOW", "symbol": ticker}
+        )
+
+        annual_reports = payload.get("annualReports", [])
+        if not annual_reports:
+            raise RuntimeError("No annual cash flow data available")
+
+        # Get most recent report
+        report = annual_reports[0]
+
+        mapping = {
+            "financials.capital_expenditure": report.get("capitalExpenditures"),
+            "cash_flow.dividends_paid": report.get("dividendPayout"),
+        }
+
+        fetched: Set[str] = set()
+        for field, value in mapping.items():
+            if value is not None and value != "None" and field in requested:
+                try:
+                    numeric_value = float(value)
+                    section, key = field.split(".", 1)
+                    data_section = data["cash_flow"] if section == "cash_flow" else data["financials"]
+                    data_section[key] = numeric_value
+                    metadata[field] = {
+                        "provider": "alpha_vantage",
+                        "timestamp": report.get("fiscalDateEnding"),
+                        "endpoint": "CASH_FLOW",
                     }
                     fetched.add(field)
                 except (ValueError, TypeError):
