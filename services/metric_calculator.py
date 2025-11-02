@@ -457,6 +457,32 @@ class PriceToEarningsCalculator(MetricCalculator):
         )
 
 
+class ForwardPECalculator(MetricCalculator):
+    """Forward P/E Ratio from market data."""
+
+    def __init__(self):
+        super().__init__('forward_pe', 'Forward P/E Ratio')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        # Forward P/E comes directly from the market data provider (Yahoo Finance)
+        forward_pe = self.get_value(raw_data, 'market_data.forward_pe')
+
+        if forward_pe is None:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Forward P/E not available from data provider'
+            )
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=forward_pe,
+            success=True,
+            metadata={'source': 'market_data'}
+        )
+
+
 class PriceToBookCalculator(MetricCalculator):
     """Calculate Price-to-Book Ratio."""
 
@@ -1264,6 +1290,7 @@ def get_all_calculators() -> List[MetricCalculator]:
 
         # Valuation
         PriceToEarningsCalculator(),
+        ForwardPECalculator(),
         PriceToBookCalculator(),
         EVToEBITDACalculator(),
         MarginOfSafetyCalculator(),

@@ -171,12 +171,17 @@ async def get_stock_history(
         "return_on_invested_capital": ("financials_history", "roic"),
         "roe": ("financials_history", "roe"),
         "return_on_equity": ("financials_history", "roe"),
-        "free_cash_flow": ("cash_flow_history", "free_cash_flow"),
-        "fcf": ("cash_flow_history", "free_cash_flow"),
+        "free_cash_flow": ("financials_history", "free_cash_flow"),
+        "fcf": ("financials_history", "free_cash_flow"),
         "revenue": ("financials_history", "revenue"),
         "net_income": ("financials_history", "net_income"),
         "operating_margin": ("financials_history", "operating_margin"),
         "gross_margin": ("financials_history", "gross_margin"),
+        "operating_income": ("financials_history", "operating_income"),
+        "shareholders_equity": ("financials_history", "shareholders_equity"),
+        "total_debt": ("financials_history", "total_debt"),
+        "operating_cash_flow": ("financials_history", "operating_cash_flow"),
+        "capital_expenditure": ("financials_history", "capital_expenditure"),
     }
 
     if metric not in metric_map:
@@ -195,11 +200,38 @@ async def get_stock_history(
             data_points=[]
         )
 
-    # Extract data points (limit to requested years)
+    # Sort history by period (oldest to newest) and limit to requested years
+    sorted_history = sorted(history, key=lambda x: x.get("period", ""))
+    limited_history = sorted_history[-years:] if len(sorted_history) > years else sorted_history
+
+    # Calculate derived metrics if needed
     data_points = []
-    for record in history[:years]:
+    for record in limited_history:
         period = record.get("period")
         value = record.get(field)
+
+        # Calculate ROIC if not present: (Net Income - Dividends) / (Debt + Equity)
+        if field == "roic" and value is None:
+            net_income = record.get("net_income")
+            equity = record.get("shareholders_equity")
+            debt = record.get("total_debt", 0)
+            if net_income and equity:
+                invested_capital = (equity + debt) if debt else equity
+                value = net_income / invested_capital if invested_capital else None
+
+        # Calculate ROE if not present: Net Income / Equity
+        elif field == "roe" and value is None:
+            net_income = record.get("net_income")
+            equity = record.get("shareholders_equity")
+            if net_income and equity:
+                value = net_income / equity
+
+        # Calculate FCF if not present: Operating Cash Flow - CapEx
+        elif field == "free_cash_flow" and value is None:
+            ocf = record.get("operating_cash_flow")
+            capex = record.get("capital_expenditure", 0)
+            if ocf is not None:
+                value = ocf - (capex if capex else 0)
 
         if period:
             data_points.append(
@@ -248,7 +280,7 @@ async def refresh_stock(
 
     # Calculate metrics
     try:
-        metrics_service.calculate_and_store(ticker, profile="buffett_core")
+        metrics_service.calculate_metrics(ticker, profile="buffett_core")
     except Exception as e:
         # Don't fail the request if metrics calculation fails
         # The raw data is still saved
@@ -257,9 +289,9 @@ async def refresh_stock(
     return RefreshStockResponse(
         success=result.success,
         ticker=ticker,
-        fields_fetched=result.fields_fetched,
-        fields_missing=result.fields_missing,
-        timestamp=result.timestamp,
+        fields_fetched=len(result.fields_fetched),
+        fields_missing=len(result.fields_missing),
+        timestamp=result.snapshot.as_of if result.snapshot else "",
         providers_used=result.providers_used,
         warnings=result.warnings
     )
@@ -303,7 +335,7 @@ async def refresh_watchlist(
                 successful += 1
                 # Calculate metrics
                 try:
-                    metrics_service.calculate_and_store(ticker, profile="buffett_core")
+                    metrics_service.calculate_metrics(ticker, profile="buffett_core")
                 except Exception:
                     pass  # Ignore metrics errors
 

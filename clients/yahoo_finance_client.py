@@ -56,6 +56,17 @@ class YahooFinanceClient:
         try:
             stock = yf.Ticker(ticker)
 
+            # Fetch market data (P/E ratios, etc.) if needed
+            need_market_data = any(
+                f.startswith("market_data.")
+                for f in requested
+            )
+
+            if need_market_data:
+                fetched |= self._fetch_market_data(
+                    stock, ticker, requested, data, source_metadata
+                )
+
             # Fetch financials if needed
             need_financials = any(
                 f.startswith("financials.") or f.startswith("cash_flow.")
@@ -73,6 +84,47 @@ class YahooFinanceClient:
             warnings.append(msg)
 
         return data, source_metadata, fetched, warnings
+
+    def _fetch_market_data(
+        self,
+        stock: Any,
+        ticker: str,
+        requested: Set[str],
+        data: Dict[str, Any],
+        metadata: Dict[str, Any],
+    ) -> Set[str]:
+        """Fetch market data including P/E ratios."""
+        fetched: Set[str] = set()
+
+        try:
+            info = stock.info
+
+            # P/E ratio mappings
+            pe_mapping = {
+                "market_data.trailing_pe": "trailingPE",
+                "market_data.forward_pe": "forwardPE",
+            }
+
+            for field, info_key in pe_mapping.items():
+                if field in requested:
+                    value = info.get(info_key)
+                    if value is not None and value != "None":
+                        try:
+                            section, key = field.split(".", 1)
+                            data["market_data"][key] = float(value)
+                            metadata[field] = {
+                                "provider": "yahoo_finance",
+                                "timestamp": None,  # Info data doesn't have timestamp
+                                "endpoint": "info",
+                            }
+                            fetched.add(field)
+                        except (ValueError, TypeError):
+                            logger.warning(f"Could not convert {field} value: {value}")
+
+        except Exception as exc:
+            logger.warning(f"Error fetching Yahoo Finance market data: {exc}")
+
+        return fetched
 
     def _fetch_financials(
         self,

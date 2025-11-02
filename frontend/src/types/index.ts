@@ -38,6 +38,7 @@ export interface StockOverview {
 
 export interface ValuationMetrics {
   price_to_earnings?: number;
+  forward_pe?: number;
   price_to_book?: number;
   ev_to_ebitda?: number;
   peg_ratio?: number;
@@ -134,11 +135,22 @@ export interface RefreshStockRequest {
 
 // UI State Types
 
+export interface SectionVisibility {
+  valuation: boolean;
+  profitability: boolean;
+  cash_generation: boolean;
+  financial_strength: boolean;
+  capital_allocation: boolean;
+  moat: boolean;
+}
+
 export interface AppState {
   selectedTicker: string | null;
   setSelectedTicker: (ticker: string | null) => void;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
+  sectionVisibility: SectionVisibility;
+  setSectionVisibility: (visibility: SectionVisibility) => void;
 }
 
 export type MetricCategory =

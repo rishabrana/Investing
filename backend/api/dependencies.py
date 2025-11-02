@@ -9,14 +9,19 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from storage.json_store import JsonStore
 from services.data_ingestion_service import DataIngestionService
 from services.metrics_service import MetricsService
+from services.data_source_router import DataSourceRouter
+from services.normalizer import Normalizer
 from clients.polygon_client import PolygonClient
 from clients.alpha_vantage_client import AlphaVantageClient
+from clients.yahoo_finance_client import YahooFinanceClient
 
 
 # Singleton instances (created once per app lifecycle)
 _json_store: JsonStore | None = None
 _data_ingestion_service: DataIngestionService | None = None
 _metrics_service: MetricsService | None = None
+_data_source_router: DataSourceRouter | None = None
+_normalizer: Normalizer | None = None
 
 
 def get_json_store() -> JsonStore:
@@ -27,13 +32,57 @@ def get_json_store() -> JsonStore:
     return _json_store
 
 
+def get_data_source_router() -> DataSourceRouter:
+    """Get or create DataSourceRouter instance."""
+    global _data_source_router
+    if _data_source_router is None:
+        store = get_json_store()
+
+        # Initialize API clients
+        clients = {}
+
+        # Polygon client
+        polygon_api_key = store.get_api_key("polygon.io")
+        if polygon_api_key:
+            clients["polygon.io"] = PolygonClient(polygon_api_key)
+
+        # Alpha Vantage client
+        av_api_key = store.get_api_key("alpha_vantage")
+        if av_api_key:
+            clients["alpha_vantage"] = AlphaVantageClient(av_api_key)
+
+        # Yahoo Finance client (no API key needed)
+        try:
+            clients["yahoo_finance"] = YahooFinanceClient()
+        except ImportError:
+            pass  # yfinance not installed
+
+        _data_source_router = DataSourceRouter(
+            mapping_path="config/data_source_mapping.yaml",
+            clients=clients
+        )
+    return _data_source_router
+
+
+def get_normalizer() -> Normalizer:
+    """Get or create Normalizer instance."""
+    global _normalizer
+    if _normalizer is None:
+        _normalizer = Normalizer()
+    return _normalizer
+
+
 def get_data_ingestion_service() -> DataIngestionService:
     """Get or create DataIngestionService instance."""
     global _data_ingestion_service
     if _data_ingestion_service is None:
         store = get_json_store()
+        router = get_data_source_router()
+        normalizer = get_normalizer()
         _data_ingestion_service = DataIngestionService(
             json_store=store,
+            data_source_router=router,
+            normalizer=normalizer,
             save_history=True
         )
     return _data_ingestion_service

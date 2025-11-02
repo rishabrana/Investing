@@ -3,6 +3,13 @@ import { Layout } from './components/layout/Layout';
 import { StockHeader } from './components/stock/StockHeader';
 import { useAppStore } from './store/appStore';
 import { useWatchlist } from './hooks/useWatchlist';
+import { useStockMetrics } from './hooks/useStock';
+import { ValuationMetrics } from './components/metrics/ValuationMetrics';
+import { ProfitabilityMetrics } from './components/metrics/ProfitabilityMetrics';
+import { CashGenerationMetrics } from './components/metrics/CashGenerationMetrics';
+import { FinancialStrengthMetrics } from './components/metrics/FinancialStrengthMetrics';
+import { CapitalAllocationMetrics } from './components/metrics/CapitalAllocationMetrics';
+import { MoatMetrics } from './components/metrics/MoatMetrics';
 import { useEffect } from 'react';
 
 const queryClient = new QueryClient({
@@ -15,8 +22,9 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  const { selectedTicker, setSelectedTicker } = useAppStore();
+  const { selectedTicker, setSelectedTicker, sectionVisibility } = useAppStore();
   const { data: watchlist } = useWatchlist();
+  const { data: metrics, isLoading, error } = useStockMetrics(selectedTicker);
 
   // Auto-select first ticker if none selected
   useEffect(() => {
@@ -30,12 +38,37 @@ function AppContent() {
       {selectedTicker ? (
         <div className="max-w-7xl mx-auto">
           <StockHeader ticker={selectedTicker} />
-          <div className="mt-6 text-center text-gray-500">
-            <p>Metric sections coming soon...</p>
-            <p className="text-sm mt-2">
-              The backend API is working! Frontend components are being built.
-            </p>
-          </div>
+
+          {isLoading && (
+            <div className="mt-6 text-center text-gray-500">
+              <p>Loading metrics...</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="mt-6 text-center text-red-600">
+              <p>Error loading metrics: {error.message}</p>
+            </div>
+          )}
+
+          {metrics && (
+            <div className="mt-6">
+              {sectionVisibility.valuation && <ValuationMetrics metrics={metrics.valuation} />}
+              {sectionVisibility.profitability && (
+                <ProfitabilityMetrics ticker={selectedTicker} metrics={metrics.profitability} />
+              )}
+              {sectionVisibility.cash_generation && (
+                <CashGenerationMetrics ticker={selectedTicker} metrics={metrics.cash_generation} />
+              )}
+              {sectionVisibility.financial_strength && (
+                <FinancialStrengthMetrics metrics={metrics.financial_strength} />
+              )}
+              {sectionVisibility.capital_allocation && (
+                <CapitalAllocationMetrics metrics={metrics.capital_allocation} />
+              )}
+              {sectionVisibility.moat && <MoatMetrics metrics={metrics.moat} />}
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex items-center justify-center h-96">

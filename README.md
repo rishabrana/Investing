@@ -5,6 +5,7 @@ This project provides a comprehensive Python toolkit that helps value-oriented i
 - **JsonStore** (in `storage/json_store.py`): Local JSON-based datastore with strict separation between raw API data and computed metrics, plus watchlist management.
 - **DataIngestionService** (in `services/data_ingestion_service.py`): Orchestrates multi-provider data fetching, normalization, and persistence.
 - **MetricsService** (in `services/metrics_service.py`): Calculates investment metrics (ROIC, FCF, P/E, etc.) from raw data.
+- **Web API & Frontend**: FastAPI backend with React/TypeScript frontend for interactive analysis.
 - **CLI Tools**: Command-line interfaces for managing API keys, watchlists, fetching data, and calculating metrics.
 
 The sections below describe how to get started, manage watchlists, fetch data, and calculate metrics.
@@ -13,17 +14,44 @@ The sections below describe how to get started, manage watchlists, fetch data, a
 
 ## 1. Quick Start
 
+### Backend Setup
+
 1. **Create / activate the virtual environment**
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
    ```
-2. **Create the initial data directory structure**
+
+2. **Start the backend API**
+   ```bash
+   python3 -m uvicorn backend.api.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+   Backend runs at: **http://localhost:8000**
+
+### Frontend Setup
+
+1. **Install frontend dependencies**
+   ```bash
+   cd frontend
+   npm install
+   ```
+
+2. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+   Frontend runs at: **http://localhost:5173** (or next available port if 5173 is in use)
+
+### Initial Configuration
+
+1. **Create the initial data directory structure**
    - The `JsonStore` automatically creates folders (e.g., `./data/raw`, `./data/watchlists`) the first time you run the CLI or ingestion service.
-3. **Provide API keys**
+
+2. **Provide API keys**
    - Either set environment variables (`POLYGON_API_KEY`, `FMP_API_KEY`, `ALPHA_VANTAGE_API_KEY`, `FINNHUB_API_KEY`), *or*
-   - Use the bundled credentials CLI (see §2.1) to store keys securely in `./data/credentials/api_keys.json`.
+   - Use the bundled credentials CLI (see §2.1) to store keys securely in `./data/credentials/api_keys.json`, *or*
+   - Use the web UI settings menu (gear icon) to add API keys through the browser
    - **Primary provider (required)**: `polygon.io`
    - **Secondary providers (recommended)**: `financial_modeling_prep`, `alpha_vantage`, `finnhub`
 

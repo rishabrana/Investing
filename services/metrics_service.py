@@ -96,6 +96,7 @@ class MetricsService:
         return {
             # Valuation
             'price_to_earnings': 'valuation',
+            'forward_pe': 'valuation',
             'price_to_book': 'valuation',
             'ev_to_ebitda': 'valuation',
             'peg_ratio': 'valuation',

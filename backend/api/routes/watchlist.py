@@ -121,7 +121,12 @@ async def remove_ticker(
     store: JsonStore = Depends(get_json_store)
 ):
     """
-    Remove a ticker from the watchlist.
+    Remove a ticker from the watchlist and delete all associated data.
+
+    This will:
+    1. Remove the ticker from the watchlist
+    2. Delete all raw data (latest and historical)
+    3. Delete all metrics data (latest and historical)
 
     Args:
         symbol: Ticker symbol to remove
@@ -151,11 +156,15 @@ async def remove_ticker(
             detail=f"{symbol} not found in watchlist"
         )
 
+    # Save updated watchlist
     store.save_watchlist(watchlist, name="default")
+
+    # Delete all data for this ticker (raw and metrics)
+    store.delete_ticker_data(symbol)
 
     return RemoveTickerResponse(
         success=True,
-        message=f"Removed {symbol} from watchlist"
+        message=f"Removed {symbol} from watchlist and deleted all associated data"
     )
 
 

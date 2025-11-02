@@ -2,6 +2,7 @@ import { Plus, X, Loader2 } from 'lucide-react';
 import { useWatchlist, useRemoveTicker } from '@/hooks/useWatchlist';
 import { useAppStore } from '@/store/appStore';
 import { useState } from 'react';
+import { AddTickerModal } from '@/components/stock/AddTickerModal';
 
 export function Sidebar() {
   const { selectedTicker, setSelectedTicker, sidebarOpen, setSidebarOpen } = useAppStore();
@@ -19,7 +20,9 @@ export function Sidebar() {
 
   const handleRemove = async (symbol: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(`Remove ${symbol} from watchlist?`)) {
+    const confirmMessage = `Remove ${symbol} from watchlist?\n\nWARNING: This will permanently delete all data for ${symbol}, including:\n• All raw market data\n• All calculated metrics\n• Complete historical data\n\nThis action cannot be undone.`;
+
+    if (confirm(confirmMessage)) {
       await removeTicker.mutateAsync(symbol);
       if (selectedTicker === symbol) {
         // Select first available ticker
@@ -42,14 +45,22 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside className="fixed lg:static inset-y-0 left-0 w-72 bg-white border-r border-gray-200 z-30 flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">Watchlist</h2>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-1 hover:bg-gray-100 rounded"
-          >
-            <X className="w-5 h-5" />
-          </button>
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Add Ticker
+            </button>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden ml-2 p-1 hover:bg-gray-100 rounded"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Ticker List */}
@@ -100,22 +111,14 @@ export function Sidebar() {
             <div className="p-4 text-center text-gray-500 text-sm">
               No stocks in watchlist.
               <br />
-              Click below to add one.
+              Click "Add Ticker" above to get started.
             </div>
           )}
         </div>
-
-        {/* Add Button */}
-        <div className="p-4 border-t border-gray-200">
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Ticker
-          </button>
-        </div>
       </aside>
+
+      {/* Add Ticker Modal */}
+      <AddTickerModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} />
     </>
   );
 }

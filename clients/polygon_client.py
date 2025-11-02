@@ -275,12 +275,12 @@ class PolygonClient:
             }
             fetched.add(field)
 
-        # Process historical data (skip first result which is current period)
-        if len(results) > 1:
+        # Process historical data (include ALL results for complete history)
+        if len(results) > 0:
             financials_history = []
             cash_flow_history = []
 
-            for hist_result in results[1:]:  # Skip index 0 (current period)
+            for hist_result in results:  # Include ALL periods
                 hist_financials = hist_result.get("financials") or {}
                 hist_income = hist_financials.get("income_statement") or {}
                 hist_balance = hist_financials.get("balance_sheet") or {}

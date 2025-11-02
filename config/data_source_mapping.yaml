@@ -35,6 +35,18 @@ data_sources:
     field: weighted_shares_outstanding
     alternative_field: share_class_shares_outstanding
 
+  market_data.trailing_pe:
+    primary: yahoo_finance
+    endpoint: info
+    field: trailingPE
+    note: Trailing twelve months P/E ratio from Yahoo Finance
+
+  market_data.forward_pe:
+    primary: yahoo_finance
+    endpoint: info
+    field: forwardPE
+    note: Forward P/E ratio based on estimated earnings from Yahoo Finance
+
   market_data_history[].market_cap:
     primary: polygon.io
     note: Historical market cap from ticker overview endpoint with date parameter

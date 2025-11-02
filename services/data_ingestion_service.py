@@ -76,6 +76,8 @@ class DataIngestionService:
             # Market data
             "market_data.market_cap",
             "market_data.shares_outstanding",
+            "market_data.trailing_pe",
+            "market_data.forward_pe",
             # Balance sheet
             "financials.shareholders_equity",
             "financials.total_liabilities",

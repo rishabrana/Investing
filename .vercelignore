@@ -1,0 +1,16 @@
+backend/
+cli/
+clients/
+config/
+data/
+docs/
+scripts/
+services/
+storage/
+tests/
+.venv/
+.pytest_cache/
+*.md
+requirements.txt
+*.py
+.git/
