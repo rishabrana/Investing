@@ -1,14 +1,15 @@
 import { X, Save } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { SectionVisibility } from '@/types';
 
 interface SectionVisibilityModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (visibility: Record<string, boolean>) => void;
-  currentVisibility: Record<string, boolean>;
+  onSave: (visibility: SectionVisibility) => void;
+  currentVisibility: SectionVisibility;
 }
 
-const SECTIONS = [
+const SECTIONS: Array<{ id: keyof SectionVisibility; name: string; description: string }> = [
   { id: 'valuation', name: 'Valuation Metrics', description: 'P/E ratio, DCF valuation, margin of safety' },
   { id: 'profitability', name: 'Profitability Metrics', description: 'ROE, ROA, profit margins' },
   { id: 'cash_generation', name: 'Cash Generation', description: 'Free cash flow, owner earnings' },
@@ -23,13 +24,13 @@ export function SectionVisibilityModal({
   onSave,
   currentVisibility,
 }: SectionVisibilityModalProps) {
-  const [visibility, setVisibility] = useState<Record<string, boolean>>(currentVisibility);
+  const [visibility, setVisibility] = useState<SectionVisibility>(currentVisibility);
 
   useEffect(() => {
     setVisibility(currentVisibility);
   }, [currentVisibility, isOpen]);
 
-  const handleToggle = (sectionId: string) => {
+  const handleToggle = (sectionId: keyof SectionVisibility) => {
     setVisibility((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
   };
 
@@ -39,18 +40,26 @@ export function SectionVisibilityModal({
   };
 
   const handleSelectAll = () => {
-    const allVisible = SECTIONS.reduce((acc, section) => {
-      acc[section.id] = true;
-      return acc;
-    }, {} as Record<string, boolean>);
+    const allVisible: SectionVisibility = {
+      valuation: true,
+      profitability: true,
+      cash_generation: true,
+      financial_strength: true,
+      capital_allocation: true,
+      moat: true,
+    };
     setVisibility(allVisible);
   };
 
   const handleDeselectAll = () => {
-    const allHidden = SECTIONS.reduce((acc, section) => {
-      acc[section.id] = false;
-      return acc;
-    }, {} as Record<string, boolean>);
+    const allHidden: SectionVisibility = {
+      valuation: false,
+      profitability: false,
+      cash_generation: false,
+      financial_strength: false,
+      capital_allocation: false,
+      moat: false,
+    };
     setVisibility(allHidden);
   };
 

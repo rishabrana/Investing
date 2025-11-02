@@ -79,7 +79,7 @@ export function ProfitabilityMetrics({ ticker, metrics }: ProfitabilityMetricsPr
       <MetricWithChart
         label="Net Margin"
         currentValue={metrics.operating_and_net_margin?.net_margin}
-        historicalData={opMarginHistory?.data_points.map(d => ({ ...d, value: d.value ? d.value * 0.85 : null }))}
+        historicalData={opMarginHistory?.data_points.map((d) => ({ ...d, value: d.value ? d.value * 0.85 : null }))}
         formatter={(v) => formatPercent(v, 1)}
         description="Net profit as % of revenue"
         color={getMarginColor(metrics.operating_and_net_margin?.net_margin)}

@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 
 interface DataPoint {
   period: string;
-  value: number;
+  value: number | null;
 }
 
 interface MetricWithChartProps {
@@ -30,13 +30,6 @@ export function MetricWithChart({
   const formattedValue = formatter && currentValue !== null && currentValue !== undefined
     ? formatter(currentValue)
     : currentValue?.toString() ?? 'N/A';
-
-  const colorClasses = {
-    default: 'text-gray-900',
-    positive: 'text-green-600',
-    negative: 'text-red-600',
-    warning: 'text-yellow-600',
-  };
 
   const badgeColorClasses = {
     default: 'bg-gray-100 text-gray-800',

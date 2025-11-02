@@ -26,7 +26,7 @@ export function Sidebar() {
       await removeTicker.mutateAsync(symbol);
       if (selectedTicker === symbol) {
         // Select first available ticker
-        const remaining = watchlist?.tickers.filter((t) => t.symbol !== symbol);
+        const remaining = watchlist?.tickers.filter((ticker) => ticker.symbol !== symbol);
         setSelectedTicker(remaining && remaining.length > 0 ? remaining[0].symbol : null);
       }
     }
