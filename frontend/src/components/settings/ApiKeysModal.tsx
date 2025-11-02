@@ -1,5 +1,8 @@
 import { X, Eye, EyeOff, Save, Trash2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import axios from 'axios';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 interface ApiKeysModalProps {
   isOpen: boolean;
@@ -33,9 +36,9 @@ export function ApiKeysModal({ isOpen, onClose }: ApiKeysModalProps) {
 
   const loadApiKeys = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/settings/api-keys');
-      if (response.ok) {
-        const data = await response.json();
+      const response = await axios.get(`${API_BASE_URL}/settings/api-keys`);
+      if (response.status === 200) {
+        const data = response.data;
         const keys = API_PROVIDERS.map((provider) => ({
           provider: provider.id,
           displayName: provider.name,
@@ -75,13 +78,9 @@ export function ApiKeysModal({ isOpen, onClose }: ApiKeysModalProps) {
         return acc;
       }, {} as Record<string, string>);
 
-      const response = await fetch('http://localhost:8000/api/settings/api-keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(keysToSave),
-      });
+      const response = await axios.post(`${API_BASE_URL}/settings/api-keys`, keysToSave);
 
-      if (response.ok) {
+      if (response.status === 200) {
         alert('API keys saved successfully!');
         onClose();
       } else {
@@ -101,11 +100,9 @@ export function ApiKeysModal({ isOpen, onClose }: ApiKeysModalProps) {
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/api/settings/api-keys/${provider}`, {
-        method: 'DELETE',
-      });
+      const response = await axios.delete(`${API_BASE_URL}/settings/api-keys/${provider}`);
 
-      if (response.ok) {
+      if (response.status === 200) {
         setApiKeys((prev) =>
           prev.map((key) =>
             key.provider === provider ? { ...key, value: '', isNew: true } : key
