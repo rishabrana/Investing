@@ -3,6 +3,7 @@ import { useWatchlist, useRemoveTicker } from '@/hooks/useWatchlist';
 import { useAppStore } from '@/store/appStore';
 import { useState } from 'react';
 import { AddTickerModal } from '@/components/stock/AddTickerModal';
+import { TickerEntry } from '@/types';
 
 export function Sidebar() {
   const { selectedTicker, setSelectedTicker, sidebarOpen, setSidebarOpen } = useAppStore();
@@ -26,7 +27,7 @@ export function Sidebar() {
       await removeTicker.mutateAsync(symbol);
       if (selectedTicker === symbol) {
         // Select first available ticker
-        const remaining = watchlist?.tickers.filter((ticker) => ticker.symbol !== symbol);
+        const remaining = watchlist?.tickers.filter((ticker: TickerEntry) => ticker.symbol !== symbol);
         setSelectedTicker(remaining && remaining.length > 0 ? remaining[0].symbol : null);
       }
     }
@@ -71,7 +72,7 @@ export function Sidebar() {
             </div>
           ) : watchlist && watchlist.tickers.length > 0 ? (
             <div className="p-2">
-              {watchlist.tickers.map((ticker) => (
+              {watchlist.tickers.map((ticker: TickerEntry) => (
                 <button
                   key={ticker.symbol}
                   onClick={() => handleSelectTicker(ticker.symbol)}

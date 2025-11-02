@@ -1,6 +1,6 @@
 import { MetricSection } from './MetricSection';
 import { MetricWithChart } from './MetricWithChart';
-import { ProfitabilityMetrics as ProfitabilityMetricsType } from '@/types';
+import { ProfitabilityMetrics as ProfitabilityMetricsType, HistoryDataPoint } from '@/types';
 import { formatPercent } from '@/utils/formatters';
 import { useStockHistory } from '@/hooks/useStock';
 
@@ -79,7 +79,7 @@ export function ProfitabilityMetrics({ ticker, metrics }: ProfitabilityMetricsPr
       <MetricWithChart
         label="Net Margin"
         currentValue={metrics.operating_and_net_margin?.net_margin}
-        historicalData={opMarginHistory?.data_points.map((d) => ({ ...d, value: d.value ? d.value * 0.85 : null }))}
+        historicalData={opMarginHistory?.data_points.map((d: HistoryDataPoint) => ({ ...d, value: d.value ? d.value * 0.85 : null }))}
         formatter={(v) => formatPercent(v, 1)}
         description="Net profit as % of revenue"
         color={getMarginColor(metrics.operating_and_net_margin?.net_margin)}
