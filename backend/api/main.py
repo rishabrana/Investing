@@ -28,9 +28,11 @@ app.add_middleware(
         "http://localhost:3000",  # React dev server
         "http://localhost:5173",  # Vite dev server
         "http://localhost:5174",  # Vite dev server (alternate port)
+        "http://localhost:4173",  # Vite preview server
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:5174",
+        "http://127.0.0.1:4173",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -41,7 +43,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(watchlist.router, prefix="/api/v1")
 app.include_router(stocks.router, prefix="/api/v1")
-app.include_router(settings.router, prefix="/api")
+app.include_router(settings.router, prefix="/api/v1")
 
 
 # Root endpoint
