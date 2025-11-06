@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
+import time
 
 from storage.json_store import JsonStore, RawSnapshot, MetricsSnapshot
 from services.data_ingestion_service import DataIngestionService
@@ -23,6 +24,7 @@ from backend.models.responses import (
     MarketData,
     HistoryDataPoint,
 )
+from backend.services.logging_service import get_logger, LogLevel, OperationType
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
 
@@ -267,24 +269,85 @@ async def refresh_stock(
     Returns:
         RefreshStockResponse with fetch results
     """
+    logger = get_logger()
     ticker = ticker.upper()
+    start_time = time.time()
 
     # Fetch raw data
-    result = data_service.refresh_ticker(ticker)
+    try:
+        result = data_service.refresh_ticker(ticker)
+        fetch_duration = (time.time() - start_time) * 1000
 
-    if not result.success:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to fetch data for {ticker}: {'; '.join(result.errors)}"
+        # Log data fetch
+        logger.log_data_fetch(
+            ticker=ticker,
+            success=result.success,
+            providers_used=result.providers_used,
+            fields_fetched=len(result.fields_fetched),
+            fields_missing=len(result.fields_missing),
+            duration_ms=fetch_duration,
+            error='; '.join(result.errors) if result.errors else None
         )
 
-    # Calculate metrics
-    try:
-        metrics_service.calculate_metrics(ticker, profile="buffett_core")
+        if not result.success:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to fetch data for {ticker}: {'; '.join(result.errors)}"
+            )
     except Exception as e:
-        # Don't fail the request if metrics calculation fails
-        # The raw data is still saved
-        result.warnings.append(f"Metrics calculation failed: {str(e)}")
+        fetch_duration = (time.time() - start_time) * 1000
+        logger.log_data_fetch(
+            ticker=ticker,
+            success=False,
+            providers_used={},
+            fields_fetched=0,
+            fields_missing=0,
+            duration_ms=fetch_duration,
+            error=str(e)
+        )
+        raise
+
+    # Calculate metrics
+    metrics_start = time.time()
+    metrics_calculated = []
+    metrics_failed = []
+    warnings = []
+
+    try:
+        snapshot = metrics_service.calculate_metrics(ticker, profile="buffett_core")
+        metrics_duration = (time.time() - metrics_start) * 1000
+
+        # Extract calculated metrics
+        if snapshot:
+            for category in ['valuation', 'profitability', 'cash_generation', 'financial_strength', 'capital_allocation']:
+                data = getattr(snapshot, category, {})
+                if data:
+                    metrics_calculated.extend(data.keys())
+
+        logger.log_metrics_calculation(
+            ticker=ticker,
+            profile="buffett_core",
+            success=True,
+            metrics_calculated=metrics_calculated,
+            metrics_failed=metrics_failed,
+            duration_ms=metrics_duration,
+            warnings=warnings
+        )
+    except Exception as e:
+        metrics_duration = (time.time() - metrics_start) * 1000
+        error_msg = f"Metrics calculation failed: {str(e)}"
+        result.warnings.append(error_msg)
+
+        logger.log_metrics_calculation(
+            ticker=ticker,
+            profile="buffett_core",
+            success=False,
+            metrics_calculated=metrics_calculated,
+            metrics_failed=[],
+            duration_ms=metrics_duration,
+            warnings=warnings,
+            error=str(e)
+        )
 
     return RefreshStockResponse(
         success=result.success,

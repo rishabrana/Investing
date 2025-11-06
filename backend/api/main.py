@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.api.routes import watchlist, stocks, health, settings
+from backend.api.routes import watchlist, stocks, health, settings, logs
 
 # Create FastAPI app
 app = FastAPI(
@@ -44,6 +44,7 @@ app.include_router(health.router, prefix="/api/v1")
 app.include_router(watchlist.router, prefix="/api/v1")
 app.include_router(stocks.router, prefix="/api/v1")
 app.include_router(settings.router, prefix="/api/v1")
+app.include_router(logs.router, prefix="/api/v1")
 
 
 # Root endpoint
