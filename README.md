@@ -39,12 +39,21 @@ Or add keys through the web interface (Settings → API Keys).
 
 ### 3. Start the Application
 
-**Terminal 1** - Start the backend API:
+**Option A - Use the run script (recommended):**
+```bash
+./runme.sh
+```
+
+This starts both backend and frontend servers automatically. Press Ctrl+C to stop both.
+
+**Option B - Manual start (separate terminals):**
+
+Terminal 1 - Backend API:
 ```bash
 PYTHONPATH=$(pwd) python3 -m uvicorn backend.api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**Terminal 2** - Start the frontend:
+Terminal 2 - Frontend:
 ```bash
 cd frontend
 npm run dev
