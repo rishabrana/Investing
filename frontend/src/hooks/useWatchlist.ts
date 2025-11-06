@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { watchlistApi } from '@/services/api';
+import { watchlistApi, stockApi } from '@/services/api';
 import type { AddTickerRequest } from '@/types';
 
 export function useWatchlist(name: string = 'default') {
@@ -35,5 +35,18 @@ export function useRemoveTicker() {
 export function useValidateTicker() {
   return useMutation({
     mutationFn: (symbol: string) => watchlistApi.validateTicker({ symbol }),
+  });
+}
+
+export function useRefreshAll() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (watchlist: string = 'default') => stockApi.refreshWatchlist(watchlist),
+    onSuccess: () => {
+      // Invalidate all stock-related queries to refetch fresh data
+      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
+      queryClient.invalidateQueries({ queryKey: ['stock'] });
+    },
   });
 }

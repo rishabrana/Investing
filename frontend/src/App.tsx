@@ -10,6 +10,7 @@ import { CashGenerationMetrics } from './components/metrics/CashGenerationMetric
 import { FinancialStrengthMetrics } from './components/metrics/FinancialStrengthMetrics';
 import { CapitalAllocationMetrics } from './components/metrics/CapitalAllocationMetrics';
 import { MoatMetrics } from './components/metrics/MoatMetrics';
+import { useAutoRefresh } from './hooks/useAutoRefresh';
 import { useEffect } from 'react';
 
 const queryClient = new QueryClient({
@@ -25,6 +26,9 @@ function AppContent() {
   const { selectedTicker, setSelectedTicker, sectionVisibility } = useAppStore();
   const { data: watchlist } = useWatchlist();
   const { data: metrics, isLoading, error } = useStockMetrics(selectedTicker);
+
+  // Enable auto-refresh every hour (3600000 ms)
+  useAutoRefresh(60 * 60 * 1000, true);
 
   // Auto-select first ticker if none selected
   useEffect(() => {

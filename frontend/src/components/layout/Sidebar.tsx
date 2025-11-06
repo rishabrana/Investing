@@ -1,5 +1,5 @@
-import { Plus, X, Loader2 } from 'lucide-react';
-import { useWatchlist, useRemoveTicker } from '@/hooks/useWatchlist';
+import { Plus, X, Loader2, RefreshCw } from 'lucide-react';
+import { useWatchlist, useRemoveTicker, useRefreshAll } from '@/hooks/useWatchlist';
 import { useAppStore } from '@/store/appStore';
 import { useState } from 'react';
 import { AddTickerModal } from '@/components/stock/AddTickerModal';
@@ -9,6 +9,7 @@ export function Sidebar() {
   const { selectedTicker, setSelectedTicker, sidebarOpen, setSidebarOpen } = useAppStore();
   const { data: watchlist, isLoading } = useWatchlist();
   const removeTicker = useRemoveTicker();
+  const refreshAll = useRefreshAll();
   const [showAddModal, setShowAddModal] = useState(false);
 
   const handleSelectTicker = (symbol: string) => {
@@ -47,7 +48,7 @@ export function Sidebar() {
       <aside className="fixed lg:static inset-y-0 left-0 w-72 bg-white border-r border-gray-200 z-30 flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => setShowAddModal(true)}
               className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
@@ -62,6 +63,15 @@ export function Sidebar() {
               <X className="w-5 h-5" />
             </button>
           </div>
+          <button
+            onClick={() => refreshAll.mutate()}
+            disabled={refreshAll.isPending || !watchlist?.tickers.length}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh data for all stocks"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshAll.isPending ? 'animate-spin' : ''}`} />
+            {refreshAll.isPending ? 'Refreshing...' : 'Refresh All'}
+          </button>
         </div>
 
         {/* Ticker List */}
