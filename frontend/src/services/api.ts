@@ -7,6 +7,7 @@ import type {
   AddTickerRequest,
   ValidateTickerRequest,
   RefreshStockRequest,
+  LogsResponse,
 } from '@/types';
 
 const api = axios.create({
@@ -70,6 +71,22 @@ export const stockApi = {
 
   refreshWatchlist: async (watchlist: string = 'default', force: boolean = false): Promise<any> => {
     const response = await api.post('/stocks/refresh-watchlist', { watchlist, force });
+    return response.data;
+  },
+};
+
+// Logs API
+export const logsApi = {
+  getRecentErrors: async (
+    ticker?: string,
+    operationType?: string,
+    hours: number = 168,
+    limit: number = 100
+  ): Promise<LogsResponse> => {
+    const params: Record<string, any> = { hours, limit };
+    if (operationType) params.operation_type = operationType;
+
+    const response = await api.get<LogsResponse>('/logs/recent-errors', { params });
     return response.data;
   },
 };

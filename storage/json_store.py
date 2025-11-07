@@ -333,17 +333,67 @@ class JsonStore:
             history_path = history_dir / f"{timestamp}.json"
             self._atomic_write(history_path, data)
 
+    def _has_meaningful_data(self, obj: Any) -> bool:
+        """
+        Recursively check if an object contains meaningful data.
+
+        Returns False if obj is None, empty dict, empty list, or nested structure with only None values.
+        """
+        if obj is None:
+            return False
+        if isinstance(obj, dict):
+            if not obj:  # Empty dict
+                return False
+            # Check if any value in dict has meaningful data
+            return any(self._has_meaningful_data(v) for v in obj.values())
+        if isinstance(obj, list):
+            if not obj:  # Empty list
+                return False
+            # Check if any item in list has meaningful data
+            return any(self._has_meaningful_data(item) for item in obj)
+        # Primitive value (number, string, bool) - considered meaningful
+        return True
+
+    def _is_raw_snapshot_empty(self, snapshot: RawSnapshot) -> bool:
+        """
+        Check if a raw snapshot has no meaningful data.
+
+        A snapshot is considered empty if all data fields contain no meaningful values
+        (only None, empty dicts/lists, or nested structures with only None values).
+        """
+        data_fields = [
+            snapshot.price,
+            snapshot.financials,
+            snapshot.market_data,
+            snapshot.cash_flow,
+            snapshot.assumptions,
+            snapshot.financials_history,
+            snapshot.market_data_history,
+            snapshot.cash_flow_history,
+            snapshot.metrics_history,
+            snapshot.projections
+        ]
+
+        # Check if any field has meaningful data
+        for field in data_fields:
+            if self._has_meaningful_data(field):
+                return False
+
+        return True
+
     def read_raw_snapshot(
         self,
         ticker: str,
-        timestamp: Optional[str] = None
+        timestamp: Optional[str] = None,
+        fallback_to_previous: bool = True
     ) -> Optional[RawSnapshot]:
         """
-        Read raw data snapshot.
+        Read raw data snapshot with fallback to previous day if empty.
 
         Args:
             ticker: Stock ticker symbol
             timestamp: Optional specific timestamp. If None, reads latest.
+            fallback_to_previous: If True, fallback to most recent non-empty snapshot
 
         Returns:
             RawSnapshot or None if not found
@@ -365,7 +415,32 @@ class JsonStore:
         with open(filepath, 'r') as f:
             data = json.load(f)
 
-        return RawSnapshot(**data)
+        snapshot = RawSnapshot(**data)
+
+        # If snapshot is empty and fallback is enabled, try to find previous non-empty snapshot
+        if fallback_to_previous and self._is_raw_snapshot_empty(snapshot):
+            # Get all historical snapshots sorted by date (newest first)
+            history_timestamps = self.list_raw_history(ticker)
+            history_timestamps.reverse()  # Most recent first
+
+            for hist_timestamp in history_timestamps:
+                try:
+                    # Read historical snapshot
+                    history_path = ticker_dir / "history" / f"{hist_timestamp}.json"
+                    if history_path.exists():
+                        with open(history_path, 'r') as f:
+                            hist_data = json.load(f)
+
+                        hist_snapshot = RawSnapshot(**hist_data)
+
+                        # If this snapshot has data, use it
+                        if not self._is_raw_snapshot_empty(hist_snapshot):
+                            return hist_snapshot
+                except Exception:
+                    # Skip invalid snapshots
+                    continue
+
+        return snapshot
 
     def list_raw_history(self, ticker: str) -> List[str]:
         """
@@ -417,17 +492,42 @@ class JsonStore:
             history_path = history_dir / f"{timestamp}.json"
             self._atomic_write(history_path, data)
 
+    def _is_metrics_snapshot_empty(self, snapshot: MetricsSnapshot) -> bool:
+        """
+        Check if a metrics snapshot has no meaningful data.
+
+        A snapshot is considered empty if all metric categories contain no meaningful values
+        (only None, empty dicts, or nested structures with only None values).
+        """
+        metric_fields = [
+            snapshot.valuation,
+            snapshot.profitability,
+            snapshot.cash_generation,
+            snapshot.financial_strength,
+            snapshot.capital_allocation,
+            snapshot.moat
+        ]
+
+        # Check if any field has meaningful data
+        for field in metric_fields:
+            if self._has_meaningful_data(field):
+                return False
+
+        return True
+
     def read_metrics_snapshot(
         self,
         ticker: str,
-        timestamp: Optional[str] = None
+        timestamp: Optional[str] = None,
+        fallback_to_previous: bool = True
     ) -> Optional[MetricsSnapshot]:
         """
-        Read computed metrics snapshot.
+        Read computed metrics snapshot with fallback to previous day if empty.
 
         Args:
             ticker: Stock ticker symbol
             timestamp: Optional specific timestamp. If None, reads latest.
+            fallback_to_previous: If True, fallback to most recent non-empty snapshot
 
         Returns:
             MetricsSnapshot or None if not found
@@ -449,7 +549,32 @@ class JsonStore:
         with open(filepath, 'r') as f:
             data = json.load(f)
 
-        return MetricsSnapshot(**data)
+        snapshot = MetricsSnapshot(**data)
+
+        # If snapshot is empty and fallback is enabled, try to find previous non-empty snapshot
+        if fallback_to_previous and self._is_metrics_snapshot_empty(snapshot):
+            # Get all historical snapshots sorted by date (newest first)
+            history_timestamps = self.list_metrics_history(ticker)
+            history_timestamps.reverse()  # Most recent first
+
+            for hist_timestamp in history_timestamps:
+                try:
+                    # Read historical snapshot
+                    history_path = ticker_dir / "history" / f"{hist_timestamp}.json"
+                    if history_path.exists():
+                        with open(history_path, 'r') as f:
+                            hist_data = json.load(f)
+
+                        hist_snapshot = MetricsSnapshot(**hist_data)
+
+                        # If this snapshot has data, use it
+                        if not self._is_metrics_snapshot_empty(hist_snapshot):
+                            return hist_snapshot
+                except Exception:
+                    # Skip invalid snapshots
+                    continue
+
+        return snapshot
 
     def list_metrics_history(self, ticker: str) -> List[str]:
         """

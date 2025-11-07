@@ -6,9 +6,13 @@ import { SectionVisibilityModal } from '@/components/settings/SectionVisibilityM
 import { useState } from 'react';
 
 export function Header() {
-  const { setSidebarOpen, sidebarOpen, sectionVisibility, setSectionVisibility } = useAppStore();
+  const { setSidebarOpen, sidebarOpen, sectionVisibility, setSectionVisibility, setViewMode } = useAppStore();
   const [showApiKeysModal, setShowApiKeysModal] = useState(false);
   const [showSectionVisibilityModal, setShowSectionVisibilityModal] = useState(false);
+
+  const handleViewLogs = () => {
+    setViewMode('logs');
+  };
 
   return (
     <>
@@ -29,6 +33,7 @@ export function Header() {
           <SettingsMenu
             onOpenApiKeys={() => setShowApiKeysModal(true)}
             onOpenSectionVisibility={() => setShowSectionVisibilityModal(true)}
+            onViewLogs={handleViewLogs}
           />
         </div>
       </header>

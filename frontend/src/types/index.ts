@@ -144,6 +144,8 @@ export interface SectionVisibility {
   moat: boolean;
 }
 
+export type ViewMode = 'metrics' | 'logs';
+
 export interface AppState {
   selectedTicker: string | null;
   setSelectedTicker: (ticker: string | null) => void;
@@ -151,6 +153,8 @@ export interface AppState {
   setSidebarOpen: (open: boolean) => void;
   sectionVisibility: SectionVisibility;
   setSectionVisibility: (visibility: SectionVisibility) => void;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
 }
 
 export type MetricCategory =
@@ -160,3 +164,27 @@ export type MetricCategory =
   | 'financial_strength'
   | 'capital_allocation'
   | 'moat';
+
+// Log Types
+
+export type LogLevel = 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
+export type OperationType = 'API_CALL' | 'METRICS_CALCULATION' | 'DATA_FETCH' | 'DATA_VALIDATION';
+
+export interface LogEntry {
+  timestamp: string;
+  operation_type: OperationType;
+  level: LogLevel;
+  message: string;
+  ticker?: string;
+  provider?: string;
+  duration_ms?: number;
+  error?: string;
+  details?: Record<string, any>;
+}
+
+export interface LogsResponse {
+  count: number;
+  hours: number;
+  operation_type?: string;
+  errors: LogEntry[];
+}

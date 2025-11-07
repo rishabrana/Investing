@@ -1,12 +1,13 @@
-import { Settings, Key, Eye } from 'lucide-react';
+import { Settings, Key, Eye, FileText } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 interface SettingsMenuProps {
   onOpenApiKeys: () => void;
   onOpenSectionVisibility: () => void;
+  onViewLogs: () => void;
 }
 
-export function SettingsMenu({ onOpenApiKeys, onOpenSectionVisibility }: SettingsMenuProps) {
+export function SettingsMenu({ onOpenApiKeys, onOpenSectionVisibility, onViewLogs }: SettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -56,6 +57,13 @@ export function SettingsMenu({ onOpenApiKeys, onOpenSectionVisibility }: Setting
           >
             <Eye className="w-4 h-4" />
             Section Visibility
+          </button>
+          <button
+            onClick={() => handleMenuItemClick(onViewLogs)}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+          >
+            <FileText className="w-4 h-4" />
+            View Logs
           </button>
         </div>
       )}

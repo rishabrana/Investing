@@ -18,6 +18,8 @@ export const useAppStore = create<AppState>()(
         moat: true,
       },
       setSectionVisibility: (visibility) => set({ sectionVisibility: visibility }),
+      viewMode: 'metrics',
+      setViewMode: (mode) => set({ viewMode: mode }),
     }),
     {
       name: 'app-settings',
