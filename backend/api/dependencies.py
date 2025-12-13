@@ -54,8 +54,11 @@ def get_data_source_router() -> DataSourceRouter:
         # Yahoo Finance client (no API key needed)
         try:
             clients["yahoo_finance"] = YahooFinanceClient()
-        except ImportError:
-            pass  # yfinance not installed
+            print(f"✓ Yahoo Finance client initialized successfully")
+        except Exception as e:
+            print(f"✗ Failed to initialize Yahoo Finance client: {e}")
+
+        print(f"Initialized clients: {list(clients.keys())}")
 
         _data_source_router = DataSourceRouter(
             mapping_path="config/data_source_mapping.yaml",

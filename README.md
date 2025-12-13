@@ -2,6 +2,8 @@
 
 A Buffett-style stock analysis tool with a web interface for tracking fundamentals, calculating investment metrics, and managing your watchlist.
 
+**Local Deployment**: This application runs on your local machine. All data is stored locally and API keys remain private on your computer.
+
 ## Quick Start
 
 ### 1. Installation
@@ -118,7 +120,6 @@ data/
 ## More Information
 
 - **Detailed Documentation**: See [DETAILED_DOCS.md](DETAILED_DOCS.md)
-- **Deployment Guide**: See [DEPLOYMENT.md](DEPLOYMENT.md)
 - **Technical Specs**: See `technical_spec.md`
 
 ## Tech Stack
