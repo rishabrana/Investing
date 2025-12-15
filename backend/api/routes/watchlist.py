@@ -1,7 +1,7 @@
 """Watchlist management endpoints."""
 
 from fastapi import APIRouter, Depends, HTTPException
-from typing import List
+from typing import List, Optional
 
 from storage.json_store import JsonStore, Watchlist, WatchlistEntry
 from clients.polygon_client import PolygonClient
@@ -60,7 +60,7 @@ async def get_watchlist(
 async def add_ticker(
     request: AddTickerRequest,
     store: JsonStore = Depends(get_json_store),
-    polygon_client: PolygonClient | None = Depends(get_polygon_client)
+    polygon_client: Optional[PolygonClient] = Depends(get_polygon_client)
 ):
     """
     Add a ticker to the watchlist.
@@ -171,7 +171,7 @@ async def remove_ticker(
 @router.post("/validate", response_model=ValidateTickerResponse)
 async def validate_ticker(
     request: ValidateTickerRequest,
-    polygon_client: PolygonClient | None = Depends(get_polygon_client)
+    polygon_client: Optional[PolygonClient] = Depends(get_polygon_client)
 ):
     """
     Validate a ticker symbol.

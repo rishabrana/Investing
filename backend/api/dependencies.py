@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+from typing import Optional
 
 # Add parent directory to path to import existing services
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -17,11 +18,11 @@ from clients.yahoo_finance_client import YahooFinanceClient
 
 
 # Singleton instances (created once per app lifecycle)
-_json_store: JsonStore | None = None
-_data_ingestion_service: DataIngestionService | None = None
-_metrics_service: MetricsService | None = None
-_data_source_router: DataSourceRouter | None = None
-_normalizer: Normalizer | None = None
+_json_store: Optional[JsonStore] = None
+_data_ingestion_service: Optional[DataIngestionService] = None
+_metrics_service: Optional[MetricsService] = None
+_data_source_router: Optional[DataSourceRouter] = None
+_normalizer: Optional[Normalizer] = None
 
 
 def get_json_store() -> JsonStore:
@@ -103,7 +104,7 @@ def get_metrics_service() -> MetricsService:
     return _metrics_service
 
 
-def get_polygon_client() -> PolygonClient | None:
+def get_polygon_client() -> Optional[PolygonClient]:
     """Get PolygonClient for ticker validation."""
     store = get_json_store()
     api_key = store.get_api_key("polygon.io")
