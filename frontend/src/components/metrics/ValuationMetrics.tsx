@@ -26,6 +26,7 @@ export function ValuationMetrics({ metrics }: ValuationMetricsProps) {
         formatter={(v) => formatRatio(v, 2)}
         description="Trailing Twelve Months P/E - Current valuation"
         color={getValueColor(metrics.price_to_earnings, { low: 15, high: 25 })}
+        metricKey="pe_ratio"
       />
       <MetricCard
         label="Forward P/E"
@@ -33,6 +34,7 @@ export function ValuationMetrics({ metrics }: ValuationMetricsProps) {
         formatter={(v) => formatRatio(v, 2)}
         description="Forward P/E - Based on estimated earnings"
         color={getValueColor(metrics.forward_pe, { low: 12, high: 20 })}
+        metricKey="pe_ratio"
       />
       <MetricCard
         label="P/B Ratio"
@@ -40,6 +42,7 @@ export function ValuationMetrics({ metrics }: ValuationMetricsProps) {
         formatter={(v) => formatRatio(v, 2)}
         description="Price to Book Value"
         color={getValueColor(metrics.price_to_book, { low: 1.5, high: 3 })}
+        metricKey="pb_ratio"
       />
       <MetricCard
         label="EV/EBITDA"
@@ -47,6 +50,7 @@ export function ValuationMetrics({ metrics }: ValuationMetricsProps) {
         formatter={(v) => formatRatio(v, 2)}
         description="Enterprise Value to EBITDA"
         color={getValueColor(metrics.ev_to_ebitda, { low: 10, high: 15 })}
+        metricKey="ev_to_ebitda"
       />
       <MetricCard
         label="PEG Ratio"
@@ -54,6 +58,7 @@ export function ValuationMetrics({ metrics }: ValuationMetricsProps) {
         formatter={(v) => formatRatio(v, 2)}
         description="P/E to Growth - Below 1 is attractive"
         color={getValueColor(metrics.peg_ratio, { low: 1, high: 2 })}
+        metricKey="peg_ratio"
       />
     </MetricSection>
   );

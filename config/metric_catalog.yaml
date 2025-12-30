@@ -296,3 +296,73 @@ metrics:
       - financials_history[].ebit
       - financials_history[].total_assets
       - financials_history[].current_liabilities
+
+  current_ratio:
+    display_name: "Current Ratio"
+    end_user_definition: |
+      Measures the company's ability to pay short-term obligations with short-term assets—a key liquidity indicator.
+    technical_definition: |
+      Current ratio compares liquid assets to near-term liabilities:
+        current_ratio = current_assets / current_liabilities
+      Values above 1.5 indicate good liquidity; above 2.0 is excellent.
+    data_points:
+      - financials.current_assets
+      - financials.current_liabilities
+
+  earnings_stability:
+    display_name: "Earnings Stability"
+    end_user_definition: |
+      Counts the number of years with positive earnings to assess the consistency and reliability of profitability.
+    technical_definition: |
+      Track positive earnings years over the available history:
+        positive_years = count(net_income_t > 0 for t in history)
+        stability_percentage = positive_years / total_years
+      For value investing, 8 out of 10 years positive is preferred.
+    data_points:
+      - financials.net_income
+      - financials_history[].net_income
+
+  dividend_history:
+    display_name: "Dividend History Analysis"
+    end_user_definition: |
+      Analyzes dividend payment consistency, growth trajectory, and aristocrat status over time.
+    technical_definition: |
+      Track dividend payments across history:
+        consecutive_years = count consecutive years with dividends > 0
+        growth_years = count years where dividend_t > dividend_{t-1}
+        avg_growth_rate = (dividends_latest / dividends_base)^(1 / years) - 1
+      Classifications:
+        - Dividend Aristocrat: 25+ consecutive years
+        - Dividend Achiever: 10+ consecutive years
+        - Consistent Payer: 5+ consecutive years
+    data_points:
+      - cash_flow.dividends_paid
+      - cash_flow_history[].dividends_paid
+
+  piotroski_fscore:
+    display_name: "Piotroski F-Score"
+    end_user_definition: |
+      A 9-point quality test that evaluates profitability, leverage, liquidity, and operating efficiency—scores of 7+ indicate strong fundamentals.
+    technical_definition: |
+      Nine binary tests (1 point each if passed):
+        1. Profitability: net_income > 0
+        2. Operating CF: operating_cash_flow > 0
+        3. ROA Improvement: current_roa > prior_roa
+        4. Quality of Earnings: operating_cash_flow > net_income
+        5. Decreasing Leverage: (debt/assets)_current < (debt/assets)_prior
+        6. Improving Liquidity: current_ratio_current > current_ratio_prior
+        7. No Dilution: shares_outstanding_current <= shares_outstanding_prior
+        8. Improving Gross Margin: gross_margin_current > gross_margin_prior
+        9. Improving Asset Turnover: (revenue/assets)_current > (revenue/assets)_prior
+      Score: sum of all passed tests (0-9)
+    data_points:
+      - financials.net_income
+      - financials.operating_cash_flow
+      - financials.total_assets
+      - financials.current_assets
+      - financials.current_liabilities
+      - financials.total_debt
+      - financials.gross_margin
+      - financials.revenue
+      - market_data.shares_outstanding
+      - financials_history[1].*  (all fields for year-over-year comparison)

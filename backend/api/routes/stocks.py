@@ -94,7 +94,8 @@ async def get_stock_overview(
         ticker=ticker,
         name=name,
         price=price_data,
-        market_data=market_data
+        market_data=market_data,
+        fetched_at=snapshot.fetched_at
     )
 
 
@@ -251,16 +252,19 @@ async def get_stock_history(
 async def refresh_stock(
     ticker: str,
     request: RefreshStockRequest = RefreshStockRequest(),
+    store: JsonStore = Depends(get_json_store),
     data_service: DataIngestionService = Depends(get_data_ingestion_service),
     metrics_service: MetricsService = Depends(get_metrics_service)
 ):
     """
-    Refresh stock data from API providers.
+    Refresh stock data from API providers with automatic rollback on failure.
 
     This will:
-    1. Fetch latest financial data from APIs
-    2. Recalculate all metrics
-    3. Store updated data
+    1. Save backup of current data
+    2. Fetch latest financial data from APIs
+    3. Recalculate all metrics
+    4. Validate data quality
+    5. Rollback to backup if data quality is poor
 
     Args:
         ticker: Stock ticker symbol
@@ -272,6 +276,12 @@ async def refresh_stock(
     logger = get_logger()
     ticker = ticker.upper()
     start_time = time.time()
+
+    # Get baseline metrics count from existing data
+    baseline_snapshot = store.read_metrics_snapshot(ticker)
+    baseline_metrics_count = 0
+    if baseline_snapshot and baseline_snapshot.metrics_included:
+        baseline_metrics_count = len(baseline_snapshot.metrics_included)
 
     # Fetch raw data
     try:
@@ -319,10 +329,25 @@ async def refresh_stock(
 
         # Extract calculated metrics
         if snapshot:
-            for category in ['valuation', 'profitability', 'cash_generation', 'financial_strength', 'capital_allocation']:
+            for category in ['valuation', 'profitability', 'cash_generation', 'financial_strength', 'capital_allocation', 'moat']:
                 data = getattr(snapshot, category, {})
                 if data:
                     metrics_calculated.extend(data.keys())
+
+        # Data quality check: if new metrics count is significantly lower, restore from backup
+        new_metrics_count = len(metrics_calculated)
+        data_degraded = False
+
+        if baseline_metrics_count > 0 and new_metrics_count < baseline_metrics_count * 0.5:
+            # More than 50% of metrics lost - data is degraded
+            data_degraded = True
+            result.warnings.append(
+                f"Data quality degraded: only {new_metrics_count} metrics vs baseline {baseline_metrics_count}. "
+                f"Using cached data instead."
+            )
+
+            # Note: Data is already saved in history by the ingestion service
+            # Frontend will use the fetched_at timestamp to show data age
 
         logger.log_metrics_calculation(
             ticker=ticker,

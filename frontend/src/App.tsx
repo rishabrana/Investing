@@ -11,6 +11,7 @@ import { FinancialStrengthMetrics } from './components/metrics/FinancialStrength
 import { CapitalAllocationMetrics } from './components/metrics/CapitalAllocationMetrics';
 import { MoatMetrics } from './components/metrics/MoatMetrics';
 import { LogsViewer } from './components/logs/LogsViewer';
+import { ValueScreener } from './components/screener/ValueScreener';
 import { useAutoRefresh } from './hooks/useAutoRefresh';
 import { useEffect } from 'react';
 
@@ -40,7 +41,9 @@ function AppContent() {
 
   return (
     <Layout>
-      {selectedTicker ? (
+      {viewMode === 'screener' ? (
+        <ValueScreener />
+      ) : selectedTicker ? (
         <div className="max-w-7xl mx-auto">
           {viewMode === 'metrics' ? (
             <>

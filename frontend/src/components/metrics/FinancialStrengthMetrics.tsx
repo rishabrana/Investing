@@ -33,6 +33,7 @@ export function FinancialStrengthMetrics({ metrics }: FinancialStrengthMetricsPr
         formatter={(v) => formatRatio(v, 2)}
         description="Total debt relative to equity"
         color={getDebtToEquityColor(metrics.debt_to_equity_and_interest_coverage?.debt_to_equity)}
+        metricKey="debt_to_equity"
       />
       <MetricCard
         label="Interest Coverage"
@@ -40,6 +41,7 @@ export function FinancialStrengthMetrics({ metrics }: FinancialStrengthMetricsPr
         formatter={(v) => formatRatio(v, 1)}
         description="Ability to cover interest payments"
         color={getInterestCoverageColor(metrics.debt_to_equity_and_interest_coverage?.interest_coverage)}
+        metricKey="interest_coverage"
       />
     </MetricSection>
   );

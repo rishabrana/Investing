@@ -14,6 +14,14 @@ export function Header() {
     setViewMode('logs');
   };
 
+  const handleViewScreener = () => {
+    setViewMode('screener');
+  };
+
+  const handleViewMetrics = () => {
+    setViewMode('metrics');
+  };
+
   return (
     <>
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
@@ -34,6 +42,8 @@ export function Header() {
             onOpenApiKeys={() => setShowApiKeysModal(true)}
             onOpenSectionVisibility={() => setShowSectionVisibilityModal(true)}
             onViewLogs={handleViewLogs}
+            onViewScreener={handleViewScreener}
+            onViewMetrics={handleViewMetrics}
           />
         </div>
       </header>

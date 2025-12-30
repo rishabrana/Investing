@@ -33,6 +33,7 @@ export function CapitalAllocationMetrics({ metrics }: CapitalAllocationMetricsPr
         formatter={(v) => formatPercent(v, 2)}
         description="Annual dividend as % of stock price"
         color="default"
+        metricKey="dividend_yield"
       />
       <MetricCard
         label="Payout Ratio"
@@ -40,6 +41,7 @@ export function CapitalAllocationMetrics({ metrics }: CapitalAllocationMetricsPr
         formatter={(v) => formatPercent(v, 1)}
         description="Dividends as % of earnings"
         color={getPayoutRatioColor(metrics.dividend_yield_and_payout_ratio?.payout_ratio)}
+        metricKey="dividend_payout_ratio"
       />
       <MetricCard
         label="WACC vs ROIC Spread"
@@ -47,6 +49,8 @@ export function CapitalAllocationMetrics({ metrics }: CapitalAllocationMetricsPr
         formatter={(v) => formatPercent(v, 1)}
         description="Value creation spread"
         color={getSpreadColor(metrics.wacc_vs_roic_spread)}
+        infoDescription="The difference between Return on Invested Capital (ROIC) and Weighted Average Cost of Capital (WACC). A positive spread indicates the company creates value by earning returns above its cost of capital."
+        infoUrl="https://www.investopedia.com/terms/r/returnoninvestmentcapital.asp"
       />
     </MetricSection>
   );

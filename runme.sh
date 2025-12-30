@@ -28,6 +28,18 @@ fi
 # Get the project root directory
 PROJECT_ROOT=$(pwd)
 
+# Kill any existing servers on ports 8000 and 5173
+echo "Checking for existing servers..."
+if lsof -ti:8000 > /dev/null 2>&1; then
+    echo "  → Killing existing backend server on port 8000"
+    lsof -ti:8000 | xargs kill -9 2>/dev/null || true
+fi
+
+if lsof -ti:5173 > /dev/null 2>&1; then
+    echo "  → Killing existing frontend server on port 5173"
+    lsof -ti:5173 | xargs kill -9 2>/dev/null || true
+fi
+
 echo "Starting servers..."
 echo ""
 

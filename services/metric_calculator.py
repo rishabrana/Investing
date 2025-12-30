@@ -412,6 +412,56 @@ class CapexRatioCalculator(MetricCalculator):
         )
 
 
+class CurrentRatioCalculator(MetricCalculator):
+    """Calculate Current Ratio (Liquidity Metric)."""
+
+    def __init__(self):
+        super().__init__('current_ratio', 'Current Ratio')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        current_assets = self.get_value(raw_data, 'financials.current_assets')
+        current_liabilities = self.get_value(raw_data, 'financials.current_liabilities')
+
+        if current_assets is None or current_liabilities is None:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing required fields: current_assets or current_liabilities'
+            )
+
+        current_ratio = self.safe_divide(current_assets, current_liabilities)
+
+        if current_ratio is None:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Current liabilities is zero'
+            )
+
+        # Determine health status
+        if current_ratio >= 2.0:
+            health = "excellent"
+        elif current_ratio >= 1.5:
+            health = "good"
+        elif current_ratio >= 1.0:
+            health = "acceptable"
+        else:
+            health = "concerning"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=current_ratio,
+            success=True,
+            metadata={
+                'current_assets': current_assets,
+                'current_liabilities': current_liabilities,
+                'health': health
+            }
+        )
+
+
 # ===== VALUATION METRICS =====
 
 class PriceToEarningsCalculator(MetricCalculator):
@@ -604,6 +654,103 @@ class DividendMetricsCalculator(MetricCalculator):
         )
 
 
+class DividendHistoryCalculator(MetricCalculator):
+    """Analyze Dividend Payment History and Consistency."""
+
+    def __init__(self):
+        super().__init__('dividend_history', 'Dividend History Analysis')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        current_dividends = self.get_value(raw_data, 'cash_flow.dividends_paid')
+        cash_flow_history = self.get_value(raw_data, 'cash_flow_history', [])
+
+        # Collect all dividend payments
+        dividend_payments = []
+
+        for cf in cash_flow_history:
+            divs = cf.get('dividends_paid')
+            if divs is not None:
+                # dividends_paid is negative, take absolute value
+                dividend_payments.append(abs(divs))
+
+        # Add current period
+        if current_dividends is not None:
+            dividend_payments.append(abs(current_dividends))
+
+        if len(dividend_payments) == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value={
+                    'pays_dividends': False,
+                    'years_of_dividends': 0,
+                    'consecutive_years': 0,
+                    'growth_years': 0,
+                    'avg_growth_rate': None,
+                    'is_aristocrat': False,
+                    'meets_5year_criteria': False,
+                    'classification': 'non_dividend_paying'
+                },
+                success=True,
+                metadata={'dividend_payments': []}
+            )
+
+        # Count consecutive years of dividends (from most recent)
+        consecutive_years = 0
+        for div in reversed(dividend_payments):
+            if div > 0:
+                consecutive_years += 1
+            else:
+                break
+
+        # Count years with growing dividends
+        growth_years = 0
+        for i in range(1, len(dividend_payments)):
+            if dividend_payments[i] > dividend_payments[i-1]:
+                growth_years += 1
+
+        # Calculate average growth rate (CAGR)
+        avg_growth_rate = None
+        if len(dividend_payments) >= 2 and dividend_payments[0] > 0:
+            years = len(dividend_payments) - 1
+            avg_growth_rate = ((dividend_payments[-1] / dividend_payments[0]) ** (1 / years)) - 1
+
+        # Determine classifications
+        years_of_dividends = len(dividend_payments)
+        is_aristocrat = consecutive_years >= 25
+        meets_5year_criteria = consecutive_years >= 5
+
+        # Classification
+        if is_aristocrat:
+            classification = "dividend_aristocrat"
+        elif consecutive_years >= 10:
+            classification = "dividend_achiever"
+        elif meets_5year_criteria:
+            classification = "consistent_payer"
+        elif consecutive_years >= 3:
+            classification = "regular_payer"
+        else:
+            classification = "irregular_payer"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value={
+                'pays_dividends': True,
+                'years_of_dividends': years_of_dividends,
+                'consecutive_years': consecutive_years,
+                'growth_years': growth_years,
+                'avg_growth_rate': avg_growth_rate,
+                'is_aristocrat': is_aristocrat,
+                'meets_5year_criteria': meets_5year_criteria,
+                'classification': classification
+            },
+            success=True,
+            metadata={
+                'dividend_payments': dividend_payments,
+                'latest_dividend': dividend_payments[-1] if dividend_payments else 0
+            }
+        )
+
+
 # ===== VALUATION - ADVANCED METRICS =====
 
 class MarginOfSafetyCalculator(MetricCalculator):
@@ -711,17 +858,25 @@ class PEGRatioCalculator(MetricCalculator):
                 error='Insufficient historical data for EPS growth'
             )
 
-        # Calculate EPS for each historical period
-        eps_values = []
+        # Calculate EPS for each historical period with periods
+        eps_data = []
         for fin in financials_history:
             hist_net_income = fin.get('net_income')
             hist_shares = fin.get('shares_outstanding')
-            if hist_net_income and hist_shares:
-                eps_values.append(hist_net_income / hist_shares)
+            period = fin.get('period', '')
+            if hist_net_income and hist_shares and period:
+                eps_data.append({
+                    'period': period,
+                    'eps': hist_net_income / hist_shares
+                })
 
-        eps_values.append(eps)  # Add current EPS
+        # Add current EPS
+        eps_data.append({
+            'period': '9999-12-31',  # Sort current to end
+            'eps': eps
+        })
 
-        if len(eps_values) < 2:
+        if len(eps_data) < 2:
             return MetricResult(
                 metric_id=self.metric_id,
                 value=None,
@@ -729,9 +884,19 @@ class PEGRatioCalculator(MetricCalculator):
                 error='Cannot calculate EPS growth'
             )
 
-        # Calculate CAGR
-        years = len(eps_values) - 1
-        eps_cagr = ((eps_values[-1] / eps_values[0]) ** (1 / years)) - 1 if eps_values[0] > 0 else None
+        # Sort by period (oldest to newest)
+        eps_data_sorted = sorted(eps_data, key=lambda x: x['period'])
+
+        # Use last 5 years for PEG calculation (industry standard)
+        # This avoids issues with old anomalies and gives more relevant growth rate
+        eps_data_recent = eps_data_sorted[-6:] if len(eps_data_sorted) > 6 else eps_data_sorted
+
+        # Calculate CAGR from oldest to newest (in recent window)
+        years = len(eps_data_recent) - 1
+        oldest_eps = eps_data_recent[0]['eps']
+        newest_eps = eps_data_recent[-1]['eps']
+
+        eps_cagr = ((newest_eps / oldest_eps) ** (1 / years)) - 1 if oldest_eps > 0 else None
 
         if eps_cagr is None or eps_cagr <= 0:
             return MetricResult(
@@ -743,7 +908,39 @@ class PEGRatioCalculator(MetricCalculator):
 
         # PEG ratio (growth as percentage)
         eps_growth_pct = eps_cagr * 100
+
+        # Check if growth rate is too low (< 0.5% annualized)
+        # Very low or negative growth rates produce unreliable PEG ratios
+        if eps_growth_pct < 0.5:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='EPS growth rate too low or negative for PEG calculation',
+                metadata={
+                    'pe_ratio': pe_ratio,
+                    'eps_growth_rate': eps_cagr,
+                    'eps_growth_pct': eps_growth_pct
+                }
+            )
+
         peg_ratio = pe_ratio / eps_growth_pct
+
+        # Cap PEG ratio at a reasonable maximum (e.g., 100)
+        # PEG ratios above 100 are not meaningful for investment decisions
+        if peg_ratio > 100:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='PEG ratio too high to be meaningful (growth rate too low)',
+                metadata={
+                    'pe_ratio': pe_ratio,
+                    'eps_growth_rate': eps_cagr,
+                    'eps_growth_pct': eps_growth_pct,
+                    'calculated_peg': peg_ratio
+                }
+            )
 
         return MetricResult(
             metric_id=self.metric_id,
@@ -879,6 +1076,88 @@ class BookValuePerShareGrowthCalculator(MetricCalculator):
                 'bvps_base': bvps_values[0],
                 'years': years,
                 'bvps_history': bvps_values
+            }
+        )
+
+
+class EarningsStabilityCalculator(MetricCalculator):
+    """Calculate Earnings Stability (positive earnings years)."""
+
+    def __init__(self):
+        super().__init__('earnings_stability', 'Earnings Stability')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        net_income = self.get_value(raw_data, 'financials.net_income')
+        financials_history = self.get_value(raw_data, 'financials_history', [])
+
+        if net_income is None:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing current net_income'
+            )
+
+        # Count positive earnings years
+        positive_years = 0
+        total_years = 0
+        yearly_earnings = []
+
+        # Historical years
+        for fin in financials_history:
+            hist_income = fin.get('net_income')
+            if hist_income is not None:
+                total_years += 1
+                yearly_earnings.append(hist_income)
+                if hist_income > 0:
+                    positive_years += 1
+
+        # Current year
+        total_years += 1
+        yearly_earnings.append(net_income)
+        if net_income > 0:
+            positive_years += 1
+
+        if total_years == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='No earnings data available'
+            )
+
+        stability_percentage = positive_years / total_years
+
+        # Determine if meets criteria (8 out of 10 years)
+        meets_criteria = False
+        if total_years >= 10:
+            meets_criteria = positive_years >= 8
+        elif total_years >= 5:
+            # For fewer years, require proportional consistency
+            meets_criteria = stability_percentage >= 0.8
+
+        # Classification
+        if stability_percentage >= 0.9:
+            classification = "highly_stable"
+        elif stability_percentage >= 0.75:
+            classification = "stable"
+        elif stability_percentage >= 0.5:
+            classification = "moderate"
+        else:
+            classification = "unstable"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value={
+                'positive_years': positive_years,
+                'total_years': total_years,
+                'stability_percentage': stability_percentage,
+                'meets_criteria': meets_criteria,
+                'classification': classification
+            },
+            success=True,
+            metadata={
+                'yearly_earnings': yearly_earnings
             }
         )
 
@@ -1160,6 +1439,167 @@ class EconomicMoatScoreCalculator(MetricCalculator):
         )
 
 
+class PiotroskiFScoreCalculator(MetricCalculator):
+    """Calculate Piotroski F-Score (9-point fundamental strength test)."""
+
+    def __init__(self):
+        super().__init__('piotroski_fscore', 'Piotroski F-Score')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        financials_history = self.get_value(raw_data, 'financials_history', [])
+        cash_flow_history = self.get_value(raw_data, 'cash_flow_history', [])
+
+        if len(financials_history) < 1:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Need at least 1 year of historical data for F-Score'
+            )
+
+        # Current period values
+        net_income = self.get_value(raw_data, 'financials.net_income')
+        operating_cf = self.get_value(raw_data, 'financials.operating_cash_flow')
+        total_assets = self.get_value(raw_data, 'financials.total_assets')
+        current_assets = self.get_value(raw_data, 'financials.current_assets')
+        current_liabilities = self.get_value(raw_data, 'financials.current_liabilities')
+        total_debt = self.get_value(raw_data, 'financials.total_debt')
+        shares_outstanding = self.get_value(raw_data, 'market_data.shares_outstanding')
+        gross_margin = self.get_value(raw_data, 'financials.gross_margin')
+        revenue = self.get_value(raw_data, 'financials.revenue')
+
+        # Previous period values
+        prev_fin = financials_history[-1]
+        prev_total_assets = prev_fin.get('total_assets')
+        prev_current_ratio = None
+        if prev_fin.get('current_assets') and prev_fin.get('current_liabilities'):
+            prev_current_ratio = prev_fin['current_assets'] / prev_fin['current_liabilities']
+        prev_debt = prev_fin.get('total_debt')
+        prev_shares = prev_fin.get('shares_outstanding')
+        prev_gross_margin = prev_fin.get('gross_margin')
+        prev_revenue = prev_fin.get('revenue')
+
+        score = 0
+        components = {}
+
+        # 1. Profitability: Net Income > 0
+        if net_income and net_income > 0:
+            score += 1
+            components['profitable'] = 1
+        else:
+            components['profitable'] = 0
+
+        # 2. Operating Cash Flow > 0
+        if operating_cf and operating_cf > 0:
+            score += 1
+            components['positive_operating_cf'] = 1
+        else:
+            components['positive_operating_cf'] = 0
+
+        # 3. ROA Change: Calculate ROA for current and previous year
+        current_roa = None
+        prev_roa = None
+        if net_income and total_assets and total_assets > 0:
+            current_roa = net_income / total_assets
+        if prev_fin.get('net_income') and prev_total_assets and prev_total_assets > 0:
+            prev_roa = prev_fin['net_income'] / prev_total_assets
+
+        if current_roa is not None and prev_roa is not None and current_roa > prev_roa:
+            score += 1
+            components['roa_improvement'] = 1
+        else:
+            components['roa_improvement'] = 0
+
+        # 4. Quality of Earnings: Operating CF > Net Income
+        if operating_cf and net_income and operating_cf > net_income:
+            score += 1
+            components['quality_of_earnings'] = 1
+        else:
+            components['quality_of_earnings'] = 0
+
+        # 5. Long-term Debt / Assets: Decreasing
+        current_leverage = None
+        prev_leverage = None
+        if total_debt is not None and total_assets and total_assets > 0:
+            current_leverage = total_debt / total_assets
+        if prev_debt is not None and prev_total_assets and prev_total_assets > 0:
+            prev_leverage = prev_debt / prev_total_assets
+
+        if current_leverage is not None and prev_leverage is not None and current_leverage < prev_leverage:
+            score += 1
+            components['decreasing_leverage'] = 1
+        else:
+            components['decreasing_leverage'] = 0
+
+        # 6. Current Ratio: Increasing
+        current_ratio = None
+        if current_assets and current_liabilities and current_liabilities > 0:
+            current_ratio = current_assets / current_liabilities
+
+        if current_ratio is not None and prev_current_ratio is not None and current_ratio > prev_current_ratio:
+            score += 1
+            components['improving_liquidity'] = 1
+        else:
+            components['improving_liquidity'] = 0
+
+        # 7. No New Shares Issued: Shares outstanding not increasing
+        if shares_outstanding and prev_shares and shares_outstanding <= prev_shares:
+            score += 1
+            components['no_dilution'] = 1
+        else:
+            components['no_dilution'] = 0
+
+        # 8. Gross Margin: Increasing
+        if gross_margin is not None and prev_gross_margin is not None and gross_margin > prev_gross_margin:
+            score += 1
+            components['improving_gross_margin'] = 1
+        else:
+            components['improving_gross_margin'] = 0
+
+        # 9. Asset Turnover: Increasing (Revenue / Assets)
+        current_asset_turnover = None
+        prev_asset_turnover = None
+        if revenue and total_assets and total_assets > 0:
+            current_asset_turnover = revenue / total_assets
+        if prev_revenue and prev_total_assets and prev_total_assets > 0:
+            prev_asset_turnover = prev_revenue / prev_total_assets
+
+        if current_asset_turnover is not None and prev_asset_turnover is not None and current_asset_turnover > prev_asset_turnover:
+            score += 1
+            components['improving_asset_turnover'] = 1
+        else:
+            components['improving_asset_turnover'] = 0
+
+        # Classification
+        if score >= 7:
+            classification = "strong"
+        elif score >= 5:
+            classification = "moderate"
+        elif score >= 3:
+            classification = "weak"
+        else:
+            classification = "very_weak"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value={
+                'score': score,
+                'max_score': 9,
+                'classification': classification,
+                'components': components
+            },
+            success=True,
+            metadata={
+                'current_roa': current_roa,
+                'prev_roa': prev_roa,
+                'current_leverage': current_leverage,
+                'prev_leverage': prev_leverage,
+                'current_ratio': current_ratio,
+                'prev_current_ratio': prev_current_ratio
+            }
+        )
+
+
 class ConsistencyScoreCalculator(MetricCalculator):
     """Calculate Consistency of Performance Score."""
 
@@ -1287,6 +1727,7 @@ def get_all_calculators() -> List[MetricCalculator]:
         # Financial Strength
         DebtToEquityCalculator(),
         CapexRatioCalculator(),
+        CurrentRatioCalculator(),
 
         # Valuation
         PriceToEarningsCalculator(),
@@ -1299,9 +1740,11 @@ def get_all_calculators() -> List[MetricCalculator]:
         # Growth
         EPSGrowthCalculator(),
         BookValuePerShareGrowthCalculator(),
+        EarningsStabilityCalculator(),
 
         # Capital Allocation
         DividendMetricsCalculator(),
+        DividendHistoryCalculator(),
         ReturnOnRetainedEarningsCalculator(),
         WACCvsROICSpreadCalculator(),
 
@@ -1311,6 +1754,7 @@ def get_all_calculators() -> List[MetricCalculator]:
         # Moat
         EconomicMoatScoreCalculator(),
         ConsistencyScoreCalculator(),
+        PiotroskiFScoreCalculator(),
     ]
 
 

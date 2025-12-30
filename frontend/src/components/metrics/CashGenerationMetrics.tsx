@@ -31,6 +31,7 @@ export function CashGenerationMetrics({ ticker, metrics }: CashGenerationMetrics
         description="Cash after capital expenditures"
         color={metrics.free_cash_flow && metrics.free_cash_flow > 0 ? 'positive' : 'negative'}
         chartColor="#10b981"
+        metricKey="free_cash_flow"
       />
       <MetricWithChart
         label="Owner Earnings"
@@ -39,6 +40,8 @@ export function CashGenerationMetrics({ ticker, metrics }: CashGenerationMetrics
         description="Buffett's measure of true earnings"
         color={metrics.owner_earnings && metrics.owner_earnings > 0 ? 'positive' : 'negative'}
         chartColor="#3b82f6"
+        infoDescription="Warren Buffett's measure of the true economic earnings available to owners. Calculated as operating cash flow minus capital expenditures and other maintenance costs."
+        infoUrl="https://www.investopedia.com/terms/o/owner_earnings_run_rate.asp"
       />
       <MetricWithChart
         label="CapEx Ratio"
@@ -47,6 +50,7 @@ export function CashGenerationMetrics({ ticker, metrics }: CashGenerationMetrics
         description="Capital expenditures as % of revenue"
         color={getCapexColor(metrics.capital_expenditure_ratio)}
         chartColor="#8b5cf6"
+        metricKey="capex_to_revenue"
       />
     </MetricSection>
   );

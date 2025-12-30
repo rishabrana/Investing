@@ -34,6 +34,7 @@ export interface StockOverview {
   name: string | null;
   price: PriceData;
   market_data: MarketData;
+  fetched_at?: string | null;
 }
 
 export interface ValuationMetrics {
@@ -54,6 +55,13 @@ export interface ProfitabilityMetrics {
   eps_growth?: number;
   book_value_per_share_growth?: number;
   ten_year_average_roce?: number;
+  earnings_stability?: {
+    positive_years: number;
+    total_years: number;
+    stability_percentage: number;
+    meets_criteria: boolean;
+    classification: string;
+  };
 }
 
 export interface CashGenerationMetrics {
@@ -67,12 +75,23 @@ export interface FinancialStrengthMetrics {
     debt_to_equity: number;
     interest_coverage: number | null;
   };
+  current_ratio?: number;
 }
 
 export interface CapitalAllocationMetrics {
   dividend_yield_and_payout_ratio?: {
     dividend_yield: number;
     payout_ratio: number;
+  };
+  dividend_history?: {
+    pays_dividends: boolean;
+    years_of_dividends: number;
+    consecutive_years: number;
+    growth_years: number;
+    avg_growth_rate: number | null;
+    is_aristocrat: boolean;
+    meets_5year_criteria: boolean;
+    classification: string;
   };
   wacc_vs_roic_spread?: number;
 }
@@ -88,6 +107,12 @@ export interface MoatMetrics {
   consistency_score?: {
     score: number;
     label: string;
+  };
+  piotroski_fscore?: {
+    score: number;
+    max_score: number;
+    classification: string;
+    components: Record<string, number>;
   };
 }
 
@@ -144,7 +169,7 @@ export interface SectionVisibility {
   moat: boolean;
 }
 
-export type ViewMode = 'metrics' | 'logs';
+export type ViewMode = 'metrics' | 'logs' | 'screener';
 
 export interface AppState {
   selectedTicker: string | null;
@@ -155,6 +180,33 @@ export interface AppState {
   setSectionVisibility: (visibility: SectionVisibility) => void;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
+}
+
+// Value Screener Types
+
+export interface ScreenerScore {
+  metric_name: string;
+  value: number | null;
+  score: number; // 0-1 where 1 is best
+  passes: boolean;
+  target: string;
+}
+
+export interface ScreenedStock {
+  ticker: string;
+  name: string | null;
+  overall_score: number; // 0-1
+  total_points: number; // Out of max possible
+  max_points: number;
+  scores: ScreenerScore[];
+  price: number | null;
+  market_cap: number | null;
+}
+
+export interface ScreenerResponse {
+  stocks: ScreenedStock[];
+  screened_at: string;
+  criteria_count: number;
 }
 
 export type MetricCategory =

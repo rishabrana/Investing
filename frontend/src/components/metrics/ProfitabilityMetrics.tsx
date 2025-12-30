@@ -57,6 +57,7 @@ export function ProfitabilityMetrics({ ticker, metrics }: ProfitabilityMetricsPr
         description="Return on Invested Capital"
         color={getRoicColor(metrics.return_on_invested_capital)}
         chartColor="#10b981"
+        metricKey="roic"
       />
       <MetricWithChart
         label="ROE"
@@ -66,6 +67,7 @@ export function ProfitabilityMetrics({ ticker, metrics }: ProfitabilityMetricsPr
         description="Return on Equity"
         color={getRoeColor(metrics.return_on_equity)}
         chartColor="#3b82f6"
+        metricKey="roe"
       />
       <MetricWithChart
         label="Operating Margin"
@@ -75,6 +77,7 @@ export function ProfitabilityMetrics({ ticker, metrics }: ProfitabilityMetricsPr
         description="Operating profit as % of revenue"
         color={getMarginColor(metrics.operating_and_net_margin?.operating_margin)}
         chartColor="#8b5cf6"
+        metricKey="operating_margin"
       />
       <MetricWithChart
         label="Net Margin"
@@ -84,6 +87,7 @@ export function ProfitabilityMetrics({ ticker, metrics }: ProfitabilityMetricsPr
         description="Net profit as % of revenue"
         color={getMarginColor(metrics.operating_and_net_margin?.net_margin)}
         chartColor="#6366f1"
+        metricKey="net_margin"
       />
       <MetricWithChart
         label="EPS Growth"
@@ -92,6 +96,7 @@ export function ProfitabilityMetrics({ ticker, metrics }: ProfitabilityMetricsPr
         description="Earnings per share growth rate"
         color={getGrowthColor(metrics.eps_growth)}
         chartColor="#f59e0b"
+        metricKey="eps_growth"
       />
       <MetricWithChart
         label="Book Value Growth"
@@ -100,6 +105,7 @@ export function ProfitabilityMetrics({ ticker, metrics }: ProfitabilityMetricsPr
         description="Book value per share growth"
         color={getGrowthColor(metrics.book_value_per_share_growth)}
         chartColor="#ef4444"
+        metricKey="book_value_growth"
       />
       <MetricWithChart
         label="10-Year Avg ROCE"
@@ -108,6 +114,7 @@ export function ProfitabilityMetrics({ ticker, metrics }: ProfitabilityMetricsPr
         description="Long-term capital efficiency"
         color={getRoicColor(metrics.ten_year_average_roce)}
         chartColor="#14b8a6"
+        metricKey="ten_year_average_roce"
       />
     </MetricSection>
   );

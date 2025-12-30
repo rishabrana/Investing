@@ -8,6 +8,7 @@ import type {
   ValidateTickerRequest,
   RefreshStockRequest,
   LogsResponse,
+  ScreenerResponse,
 } from '@/types';
 
 const api = axios.create({
@@ -89,6 +90,12 @@ export const logsApi = {
     const response = await api.get<LogsResponse>('/logs/recent-errors', { params });
     return response.data;
   },
+};
+
+// Screener API
+export const getValueScreener = async (): Promise<ScreenerResponse> => {
+  const response = await api.get<ScreenerResponse>('/screener/value');
+  return response.data;
 };
 
 export default api;

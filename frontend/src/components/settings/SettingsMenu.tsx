@@ -1,13 +1,15 @@
-import { Settings, Key, Eye, FileText } from 'lucide-react';
+import { Settings, Key, Eye, FileText, Filter, BarChart3 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 interface SettingsMenuProps {
   onOpenApiKeys: () => void;
   onOpenSectionVisibility: () => void;
   onViewLogs: () => void;
+  onViewScreener: () => void;
+  onViewMetrics: () => void;
 }
 
-export function SettingsMenu({ onOpenApiKeys, onOpenSectionVisibility, onViewLogs }: SettingsMenuProps) {
+export function SettingsMenu({ onOpenApiKeys, onOpenSectionVisibility, onViewLogs, onViewScreener, onViewMetrics }: SettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -44,6 +46,21 @@ export function SettingsMenu({ onOpenApiKeys, onOpenSectionVisibility, onViewLog
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+          <button
+            onClick={() => handleMenuItemClick(onViewMetrics)}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+          >
+            <BarChart3 className="w-4 h-4" />
+            Stock Analysis
+          </button>
+          <button
+            onClick={() => handleMenuItemClick(onViewScreener)}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+          >
+            <Filter className="w-4 h-4" />
+            Value Screener
+          </button>
+          <div className="border-t border-gray-200 my-1" />
           <button
             onClick={() => handleMenuItemClick(onOpenApiKeys)}
             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"

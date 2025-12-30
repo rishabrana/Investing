@@ -107,6 +107,7 @@ class MetricsService:
             'return_on_equity': 'profitability',
             'operating_and_net_margin': 'profitability',
             'ten_year_average_roce': 'profitability',
+            'earnings_stability': 'profitability',
 
             # Cash Generation
             'free_cash_flow': 'cash_generation',
@@ -115,15 +116,18 @@ class MetricsService:
 
             # Financial Strength
             'debt_to_equity_and_interest_coverage': 'financial_strength',
+            'current_ratio': 'financial_strength',
 
             # Capital Allocation
             'dividend_yield_and_payout_ratio': 'capital_allocation',
+            'dividend_history': 'capital_allocation',
             'return_on_retained_earnings': 'capital_allocation',
             'wacc_vs_roic_spread': 'capital_allocation',
 
             # Moat
             'economic_moat_score': 'moat',
             'consistency_score': 'moat',
+            'piotroski_fscore': 'moat',
 
             # Growth
             'eps_growth': 'profitability',

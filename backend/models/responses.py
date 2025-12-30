@@ -72,6 +72,7 @@ class StockOverviewResponse(BaseModel):
     name: Optional[str] = None
     price: PriceData
     market_data: MarketData
+    fetched_at: Optional[str] = None
 
 
 class StockMetricsResponse(BaseModel):
@@ -135,3 +136,36 @@ class RefreshWatchlistResponse(BaseModel):
     successful: int
     failed: int
     results: List[RefreshResult]
+
+
+# Screener Models
+
+class ScreenerScore(BaseModel):
+    """Individual metric score in screener."""
+
+    metric_name: str
+    value: Optional[float] = None
+    score: float  # 0-1 where 1 is best
+    passes: bool  # Whether it meets the criteria
+    target: str  # Target criteria description
+
+
+class ScreenedStock(BaseModel):
+    """Stock with screener scores."""
+
+    ticker: str
+    name: Optional[str] = None
+    overall_score: float  # 0-1 aggregate score
+    total_points: int  # Number of passing criteria
+    max_points: int  # Total number of criteria
+    scores: List[ScreenerScore]
+    price: Optional[float] = None
+    market_cap: Optional[float] = None
+
+
+class ScreenerResponse(BaseModel):
+    """Response for GET /screener/value."""
+
+    stocks: List[ScreenedStock]
+    screened_at: str  # ISO timestamp
+    criteria_count: int

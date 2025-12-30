@@ -1,4 +1,4 @@
-import { RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, Clock } from 'lucide-react';
 import { useStockOverview, useRefreshStock } from '@/hooks/useStock';
 import { formatCurrency, formatChange, formatDate, getChangeColorClass } from '@/utils/formatters';
 
@@ -12,6 +12,34 @@ export function StockHeader({ ticker }: StockHeaderProps) {
 
   const handleRefresh = () => {
     refreshMutation.mutate({ ticker, force: true });
+  };
+
+  // Calculate data age
+  const getDataAge = (fetchedAt?: string | null) => {
+    if (!fetchedAt) return null;
+    const now = new Date();
+    const fetched = new Date(fetchedAt);
+    const ageHours = (now.getTime() - fetched.getTime()) / (1000 * 60 * 60);
+    return ageHours;
+  };
+
+  const getDataAgeDisplay = (fetchedAt?: string | null) => {
+    if (!fetchedAt) return { text: 'Unknown', isStale: true };
+
+    const ageHours = getDataAge(fetchedAt);
+    if (ageHours === null) return { text: 'Unknown', isStale: true };
+
+    const isStale = ageHours > 24;
+
+    if (ageHours < 1) {
+      return { text: 'Just now', isStale: false };
+    } else if (ageHours < 24) {
+      const hours = Math.floor(ageHours);
+      return { text: `${hours} hour${hours !== 1 ? 's' : ''} ago`, isStale: false };
+    } else {
+      const days = Math.floor(ageHours / 24);
+      return { text: `${days} day${days !== 1 ? 's' : ''} ago`, isStale: true };
+    }
   };
 
   if (isLoading) {
@@ -34,6 +62,7 @@ export function StockHeader({ ticker }: StockHeaderProps) {
   if (!overview) return null;
 
   const isPositive = (overview.price.change || 0) >= 0;
+  const dataAge = getDataAgeDisplay(overview.fetched_at);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
@@ -54,7 +83,13 @@ export function StockHeader({ ticker }: StockHeaderProps) {
             </button>
           </div>
           <p className="text-gray-600 mt-1">{overview.name || ticker}</p>
-          <p className="text-sm text-gray-500 mt-2">As of {formatDate(overview.price.as_of)}</p>
+          <div className="flex items-center gap-4 mt-2">
+            <p className="text-sm text-gray-500">As of {formatDate(overview.price.as_of)}</p>
+            <div className={`flex items-center gap-1 text-xs ${dataAge.isStale ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'} px-2 py-1 rounded`}>
+              <Clock className="w-3 h-3" />
+              <span>Data updated {dataAge.text}</span>
+            </div>
+          </div>
         </div>
 
         {/* Right side - Price */}
@@ -102,6 +137,22 @@ export function StockHeader({ ticker }: StockHeaderProps) {
       {refreshMutation.isSuccess && (
         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
           <p className="text-sm text-green-800">✓ Data refreshed successfully</p>
+        </div>
+      )}
+
+      {refreshMutation.isError && (
+        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-sm text-red-800">
+            ✗ Refresh failed. Using cached data. Try again in a few minutes to avoid rate limits.
+          </p>
+        </div>
+      )}
+
+      {dataAge.isStale && (
+        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-800">
+            ⚠ Data is more than 24 hours old. Consider refreshing to get the latest information.
+          </p>
         </div>
       )}
     </div>
