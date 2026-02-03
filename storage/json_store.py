@@ -24,6 +24,7 @@ API_ENV_MAP: Dict[str, Optional[str]] = {
     "financial_modeling_prep": "FMP_API_KEY",
     "alpha_vantage": "ALPHA_VANTAGE_API_KEY",
     "finnhub.io": "FINNHUB_API_KEY",
+    "financial_datasets": "FINANCIAL_DATASETS_API_KEY",
     "yahoo_finance": None,  # library-based/no API key required
 }
 
@@ -40,6 +41,10 @@ _PROVIDER_ALIASES: Dict[str, str] = {
     "alpha-vantage": "alpha_vantage",
     "finnhub": "finnhub.io",
     "finnhub.io": "finnhub.io",
+    "financial_datasets": "financial_datasets",
+    "financialdatasets": "financial_datasets",
+    "financial-datasets": "financial_datasets",
+    "financialdatasets.ai": "financial_datasets",
 }
 
 SUPPORTED_PROVIDERS: Tuple[str, ...] = tuple(API_ENV_MAP.keys())

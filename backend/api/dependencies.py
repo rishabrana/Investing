@@ -15,6 +15,7 @@ from services.normalizer import Normalizer
 from clients.polygon_client import PolygonClient
 from clients.alpha_vantage_client import AlphaVantageClient
 from clients.yahoo_finance_client import YahooFinanceClient
+from clients.financial_datasets_client import FinancialDatasetsClient
 
 
 # Singleton instances (created once per app lifecycle)
@@ -41,6 +42,11 @@ def get_data_source_router() -> DataSourceRouter:
 
         # Initialize API clients
         clients = {}
+
+        # Financial Datasets client (preferred primary)
+        fd_api_key = store.get_api_key("financial_datasets")
+        if fd_api_key:
+            clients["financial_datasets"] = FinancialDatasetsClient(fd_api_key)
 
         # Polygon client
         polygon_api_key = store.get_api_key("polygon.io")

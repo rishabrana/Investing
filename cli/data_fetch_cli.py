@@ -9,7 +9,7 @@ import json
 import sys
 from typing import Optional, Tuple, List
 
-from clients import PolygonClient, AlphaVantageClient, YahooFinanceClient
+from clients import PolygonClient, AlphaVantageClient, YahooFinanceClient, FinancialDatasetsClient
 from services import DataIngestionService, DataSourceRouter, Normalizer
 from storage.json_store import (
     API_ENV_MAP,
@@ -21,6 +21,7 @@ from storage.json_store import (
 # Provider priority definitions (align with technical spec)
 PRIMARY_PROVIDERS: List[str] = ["polygon.io"]
 SECONDARY_PROVIDERS: List[str] = [
+    "financial_datasets",
     "financial_modeling_prep",
     "alpha_vantage",
     "finnhub.io",
@@ -100,6 +101,14 @@ def cmd_run(args: argparse.Namespace) -> int:
             )
 
     clients = {}
+
+    # Initialize Financial Datasets client (preferred primary)
+    fd_key = store.get_api_key("financial_datasets")
+    if fd_key:
+        try:
+            clients["financial_datasets"] = FinancialDatasetsClient(fd_key)
+        except ValueError as exc:
+            print(f"Warning: {exc}", file=sys.stderr)
 
     # Initialize Polygon client
     polygon_key = store.get_api_key("polygon.io")
