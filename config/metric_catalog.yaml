@@ -366,3 +366,278 @@ metrics:
       - financials.revenue
       - market_data.shares_outstanding
       - financials_history[1].*  (all fields for year-over-year comparison)
+
+  # ===== Buffett/Munger Additional Metrics =====
+
+  gross_profit_margin:
+    display_name: "Gross Profit Margin"
+    end_user_definition: |
+      Buffett's favorite moat indicator—companies with durable competitive advantages consistently earn gross margins above 40%.
+    technical_definition: |
+      gross_profit_margin = gross_profit / revenue
+      Buffett considers >40% a sign of durable competitive advantage; <20% suggests a highly competitive industry.
+    data_points:
+      - financials.gross_profit
+      - financials.revenue
+
+  price_to_fcf:
+    display_name: "Price to Free Cash Flow"
+    end_user_definition: |
+      Buffett's preferred valuation metric—how much investors pay for each dollar of free cash the business generates.
+    technical_definition: |
+      price_to_fcf = market_cap / free_cash_flow
+      free_cash_flow = operating_cash_flow - capital_expenditure
+      Values below 15 generally indicate attractive pricing.
+    data_points:
+      - market_data.market_cap
+      - financials.operating_cash_flow
+      - financials.capital_expenditure
+
+  fcf_yield:
+    display_name: "Free Cash Flow Yield"
+    end_user_definition: |
+      The inverse of Price-to-FCF—shows the cash return an investor earns relative to the stock price.
+    technical_definition: |
+      fcf_yield = free_cash_flow / market_cap
+      free_cash_flow = operating_cash_flow - capital_expenditure
+      Yields above 5% are generally considered attractive.
+    data_points:
+      - market_data.market_cap
+      - financials.operating_cash_flow
+      - financials.capital_expenditure
+
+  long_term_debt_to_earnings:
+    display_name: "Long-term Debt to Earnings"
+    end_user_definition: |
+      How many years of earnings it would take to pay off all debt—Buffett prefers companies that could be debt-free in under 4 years.
+    technical_definition: |
+      long_term_debt_to_earnings = total_debt / net_income
+      Values below 4 indicate manageable debt levels.
+    data_points:
+      - financials.total_debt
+      - financials.net_income
+
+  quality_of_earnings:
+    display_name: "Quality of Earnings"
+    end_user_definition: |
+      Compares cash generated from operations to reported earnings—values above 1.0 mean the company generates more cash than it reports in profit.
+    technical_definition: |
+      quality_of_earnings = operating_cash_flow / net_income
+      Values above 1.0 indicate high-quality, cash-backed earnings.
+      Values well below 1.0 may signal aggressive accounting.
+    data_points:
+      - financials.operating_cash_flow
+      - financials.net_income
+
+  altman_z_score:
+    display_name: "Altman Z-Score"
+    end_user_definition: |
+      A bankruptcy risk predictor combining five financial ratios—scores above 3.0 indicate financial safety.
+    technical_definition: |
+      z_score = 1.2*X1 + 1.4*X2 + 3.3*X3 + 0.6*X4 + 1.0*X5
+      X1 = working_capital / total_assets
+      X2 = retained_earnings / total_assets
+      X3 = ebit / total_assets
+      X4 = market_cap / total_liabilities
+      X5 = revenue / total_assets
+      Score > 3.0: Safe zone; 1.8-3.0: Grey zone; < 1.8: Distress zone.
+    data_points:
+      - financials.current_assets
+      - financials.current_liabilities
+      - financials.total_assets
+      - financials.total_liabilities
+      - financials.retained_earnings
+      - financials.ebit
+      - financials.revenue
+      - market_data.market_cap
+
+  cash_conversion_cycle:
+    display_name: "Cash Conversion Cycle"
+    end_user_definition: |
+      How many days it takes to convert inventory investments into cash—shorter cycles indicate more efficient operations.
+    technical_definition: |
+      ccc = DSO + DIO - DPO
+      DSO = (accounts_receivable / revenue) * 365
+      DIO = (inventory / cost_of_goods_sold) * 365
+      DPO = (accounts_payable / cost_of_goods_sold) * 365
+    data_points:
+      - financials.revenue
+      - financials.accounts_receivable
+      - financials.inventory
+      - financials.accounts_payable
+      - financials.gross_profit
+
+  graham_number:
+    display_name: "Graham Number"
+    end_user_definition: |
+      Benjamin Graham's intrinsic value formula—if the stock price is below the Graham Number, the stock may be undervalued.
+    technical_definition: |
+      graham_number = sqrt(22.5 * EPS * BVPS)
+      EPS = net_income / shares_outstanding
+      BVPS = shareholders_equity / shares_outstanding
+      margin_of_safety = (graham_number - price) / graham_number
+    data_points:
+      - financials.net_income
+      - financials.shareholders_equity
+      - market_data.shares_outstanding
+      - price.close
+
+  cash_return_on_invested_capital:
+    display_name: "Cash Return on Invested Capital (CROIC)"
+    end_user_definition: |
+      Measures how efficiently a company converts invested capital into free cash flow—a cash-based alternative to ROIC.
+    technical_definition: |
+      croic = free_cash_flow / invested_capital
+      free_cash_flow = operating_cash_flow - capital_expenditure
+      invested_capital = total_debt + shareholders_equity - cash_and_equivalents
+      Values above 15% indicate excellent cash generation.
+    data_points:
+      - financials.operating_cash_flow
+      - financials.capital_expenditure
+      - financials.total_debt
+      - financials.shareholders_equity
+      - financials.cash_and_equivalents
+
+  gross_margin_stability:
+    display_name: "Gross Margin Stability"
+    end_user_definition: |
+      Measures how consistent gross margins have been over time—low volatility signals a durable competitive moat.
+    technical_definition: |
+      Collect gross margins from financials_history.
+      coefficient_of_variation = std_dev(gross_margins) / mean(gross_margins)
+      stability = 1 - coefficient_of_variation
+      Values above 0.85 indicate high stability.
+    data_points:
+      - financials_history[].gross_margin
+
+  debt_to_ebitda:
+    display_name: "Debt to EBITDA"
+    end_user_definition: |
+      How many years of operating earnings it would take to pay off all debt—a key leverage metric used by Buffett.
+    technical_definition: |
+      debt_to_ebitda = total_debt / ebitda
+      Values below 3.0x are considered conservative.
+    data_points:
+      - financials.total_debt
+      - financials.ebitda
+
+  net_debt_to_equity:
+    display_name: "Net Debt to Equity"
+    end_user_definition: |
+      Adjusts leverage for cash on hand—shows how much net debt exists relative to shareholder equity.
+    technical_definition: |
+      net_debt_to_equity = (total_debt - cash_and_equivalents) / shareholders_equity
+      Negative values mean the company has more cash than debt.
+    data_points:
+      - financials.total_debt
+      - financials.cash_and_equivalents
+      - financials.shareholders_equity
+
+  accruals_ratio:
+    display_name: "Accruals Ratio"
+    end_user_definition: |
+      Detects earnings manipulation—high accruals relative to assets may signal aggressive accounting.
+    technical_definition: |
+      accruals_ratio = (net_income - operating_cash_flow) / total_assets
+      Values closer to zero or negative indicate higher earnings quality.
+    data_points:
+      - financials.net_income
+      - financials.operating_cash_flow
+      - financials.total_assets
+
+  asset_turnover:
+    display_name: "Asset Turnover"
+    end_user_definition: |
+      How efficiently a company uses its assets to generate revenue—higher values indicate better asset utilization.
+    technical_definition: |
+      asset_turnover = revenue / total_assets
+    data_points:
+      - financials.revenue
+      - financials.total_assets
+
+  sustainable_growth_rate:
+    display_name: "Sustainable Growth Rate"
+    end_user_definition: |
+      The maximum growth rate achievable without external financing—based on ROE and earnings retention.
+    technical_definition: |
+      retention_ratio = 1 - (dividends_paid / net_income)
+      roe = net_income / shareholders_equity
+      sustainable_growth_rate = roe * retention_ratio
+    data_points:
+      - financials.net_income
+      - financials.shareholders_equity
+      - cash_flow.dividends_paid
+
+  capex_to_depreciation:
+    display_name: "CapEx to Depreciation"
+    end_user_definition: |
+      Compares new investment to asset wear-and-tear—ratios near 1.0 mean the company is just maintaining assets.
+    technical_definition: |
+      capex_to_depreciation = capital_expenditure / depreciation_amortization
+      Values above 1.5 suggest significant growth investment.
+      Values below 1.0 may indicate underinvestment.
+    data_points:
+      - financials.capital_expenditure
+      - financials.depreciation_amortization
+
+  sloan_ratio:
+    display_name: "Sloan Ratio"
+    end_user_definition: |
+      An earnings quality metric—lower ratios indicate earnings are backed by real cash flows rather than accounting accruals.
+    technical_definition: |
+      sloan_ratio = (net_income - (operating_cash_flow - capital_expenditure)) / total_assets
+      Values below -10% indicate high quality; above 10% may signal manipulation.
+    data_points:
+      - financials.net_income
+      - financials.operating_cash_flow
+      - financials.capital_expenditure
+      - financials.total_assets
+
+  rd_to_revenue:
+    display_name: "R&D to Revenue"
+    end_user_definition: |
+      How much revenue is reinvested in research—Buffett prefers companies that don't need heavy R&D to maintain their moat.
+    technical_definition: |
+      rd_to_revenue = research_and_development / revenue
+      Data sourced from SEC EDGAR XBRL filings.
+    data_points:
+      - financials.research_and_development
+      - financials.revenue
+
+  sga_to_gross_profit:
+    display_name: "SG&A to Gross Profit"
+    end_user_definition: |
+      Munger's efficiency metric—companies with durable advantages keep SG&A below 80% of gross profit.
+    technical_definition: |
+      sga_to_gross_profit = selling_general_admin / gross_profit
+      Values below 80% indicate efficient operations.
+      Data may be sourced from SEC EDGAR XBRL filings.
+    data_points:
+      - financials.selling_general_admin
+      - financials.gross_profit
+
+  goodwill_to_assets:
+    display_name: "Goodwill to Assets"
+    end_user_definition: |
+      How much of the balance sheet is goodwill from acquisitions—high ratios may indicate overpaying for acquisitions.
+    technical_definition: |
+      goodwill_to_assets = goodwill / total_assets
+      Values above 30% warrant scrutiny of acquisition history.
+      Data sourced from SEC EDGAR XBRL filings.
+    data_points:
+      - financials.goodwill
+      - financials.total_assets
+
+  return_on_tangible_equity:
+    display_name: "Return on Tangible Equity (ROTE)"
+    end_user_definition: |
+      ROE without the distortion of goodwill and intangibles—shows the true return on hard assets.
+    technical_definition: |
+      tangible_equity = shareholders_equity - goodwill - intangible_assets
+      rote = net_income / tangible_equity
+      Values above 15% indicate excellent returns on real assets.
+    data_points:
+      - financials.net_income
+      - financials.shareholders_equity
+      - financials.goodwill
+      - financials.intangible_assets

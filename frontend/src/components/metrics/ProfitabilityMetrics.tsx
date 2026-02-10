@@ -14,6 +14,8 @@ export function ProfitabilityMetrics({ ticker, metrics }: ProfitabilityMetricsPr
   const { data: roicHistory } = useStockHistory(ticker, 'roic', 10);
   const { data: roeHistory } = useStockHistory(ticker, 'roe', 10);
   const { data: opMarginHistory } = useStockHistory(ticker, 'operating_margin', 10);
+  const { data: epsHistory } = useStockHistory(ticker, 'eps', 10);
+  const { data: bvpsHistory } = useStockHistory(ticker, 'book_value_per_share', 10);
 
   const getRoicColor = (value: number | undefined) => {
     if (!value) return 'default';
@@ -92,6 +94,7 @@ export function ProfitabilityMetrics({ ticker, metrics }: ProfitabilityMetricsPr
       <MetricWithChart
         label="EPS Growth"
         currentValue={metrics.eps_growth}
+        historicalData={epsHistory?.data_points}
         formatter={(v) => formatPercent(v, 1)}
         description="Earnings per share growth rate"
         color={getGrowthColor(metrics.eps_growth)}
@@ -101,6 +104,7 @@ export function ProfitabilityMetrics({ ticker, metrics }: ProfitabilityMetricsPr
       <MetricWithChart
         label="Book Value Growth"
         currentValue={metrics.book_value_per_share_growth}
+        historicalData={bvpsHistory?.data_points}
         formatter={(v) => formatPercent(v, 1)}
         description="Book value per share growth"
         color={getGrowthColor(metrics.book_value_per_share_growth)}

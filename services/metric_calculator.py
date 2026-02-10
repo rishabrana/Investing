@@ -1712,6 +1712,1009 @@ class ConsistencyScoreCalculator(MetricCalculator):
         )
 
 
+# ===== BUFFETT/MUNGER METRICS =====
+
+class GrossProfitMarginCalculator(MetricCalculator):
+    """Calculate Gross Profit Margin (Buffett's moat indicator)."""
+
+    def __init__(self):
+        super().__init__('gross_profit_margin', 'Gross Profit Margin')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        gross_profit = self.get_value(raw_data, 'financials.gross_profit')
+        revenue = self.get_value(raw_data, 'financials.revenue')
+
+        if gross_profit is None or revenue is None or revenue == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing gross_profit or revenue'
+            )
+
+        gross_margin = gross_profit / revenue
+
+        # Buffett considers >40% as durable competitive advantage
+        if gross_margin >= 0.40:
+            moat_indicator = "strong"
+        elif gross_margin >= 0.25:
+            moat_indicator = "moderate"
+        else:
+            moat_indicator = "weak"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=gross_margin,
+            success=True,
+            metadata={
+                'gross_profit': gross_profit,
+                'revenue': revenue,
+                'moat_indicator': moat_indicator
+            }
+        )
+
+
+class PriceToFCFCalculator(MetricCalculator):
+    """Calculate Price to Free Cash Flow (Buffett's preferred valuation)."""
+
+    def __init__(self):
+        super().__init__('price_to_fcf', 'Price to Free Cash Flow')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        market_cap = self.get_value(raw_data, 'market_data.market_cap')
+        operating_cf = self.get_value(raw_data, 'financials.operating_cash_flow')
+        capex = self.get_value(raw_data, 'financials.capital_expenditure')
+
+        if market_cap is None or operating_cf is None:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing market_cap or operating_cash_flow'
+            )
+
+        # capex is negative
+        fcf = operating_cf + (capex or 0)
+
+        if fcf <= 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Free cash flow is zero or negative'
+            )
+
+        price_to_fcf = market_cap / fcf
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=price_to_fcf,
+            success=True,
+            metadata={
+                'market_cap': market_cap,
+                'free_cash_flow': fcf
+            }
+        )
+
+
+class FCFYieldCalculator(MetricCalculator):
+    """Calculate Free Cash Flow Yield."""
+
+    def __init__(self):
+        super().__init__('fcf_yield', 'Free Cash Flow Yield')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        market_cap = self.get_value(raw_data, 'market_data.market_cap')
+        operating_cf = self.get_value(raw_data, 'financials.operating_cash_flow')
+        capex = self.get_value(raw_data, 'financials.capital_expenditure')
+
+        if market_cap is None or market_cap == 0 or operating_cf is None:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing market_cap or operating_cash_flow'
+            )
+
+        fcf = operating_cf + (capex or 0)
+        fcf_yield = fcf / market_cap
+
+        # >5% is generally attractive
+        if fcf_yield >= 0.08:
+            attractiveness = "very_attractive"
+        elif fcf_yield >= 0.05:
+            attractiveness = "attractive"
+        elif fcf_yield >= 0.03:
+            attractiveness = "fair"
+        else:
+            attractiveness = "low"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=fcf_yield,
+            success=True,
+            metadata={
+                'free_cash_flow': fcf,
+                'market_cap': market_cap,
+                'attractiveness': attractiveness
+            }
+        )
+
+
+class LongTermDebtToEarningsCalculator(MetricCalculator):
+    """Calculate Long-term Debt to Earnings (should be <4 years)."""
+
+    def __init__(self):
+        super().__init__('long_term_debt_to_earnings', 'Long-term Debt to Earnings')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        total_debt = self.get_value(raw_data, 'financials.total_debt')
+        net_income = self.get_value(raw_data, 'financials.net_income')
+
+        if total_debt is None or net_income is None or net_income <= 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing total_debt or net_income (or net_income is negative)'
+            )
+
+        years_to_pay = total_debt / net_income
+
+        # Buffett prefers <4 years
+        if years_to_pay <= 3:
+            debt_level = "conservative"
+        elif years_to_pay <= 4:
+            debt_level = "acceptable"
+        elif years_to_pay <= 6:
+            debt_level = "moderate"
+        else:
+            debt_level = "high"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=years_to_pay,
+            success=True,
+            metadata={
+                'total_debt': total_debt,
+                'net_income': net_income,
+                'debt_level': debt_level
+            }
+        )
+
+
+class QualityOfEarningsCalculator(MetricCalculator):
+    """Calculate Quality of Earnings (OCF / Net Income)."""
+
+    def __init__(self):
+        super().__init__('quality_of_earnings', 'Quality of Earnings')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        operating_cf = self.get_value(raw_data, 'financials.operating_cash_flow')
+        net_income = self.get_value(raw_data, 'financials.net_income')
+
+        if operating_cf is None or net_income is None or net_income == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing operating_cash_flow or net_income'
+            )
+
+        quality_ratio = operating_cf / net_income
+
+        # >1.0 indicates earnings are backed by cash
+        if quality_ratio >= 1.2:
+            quality = "excellent"
+        elif quality_ratio >= 1.0:
+            quality = "good"
+        elif quality_ratio >= 0.8:
+            quality = "acceptable"
+        else:
+            quality = "poor"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=quality_ratio,
+            success=True,
+            metadata={
+                'operating_cash_flow': operating_cf,
+                'net_income': net_income,
+                'quality': quality
+            }
+        )
+
+
+class AltmanZScoreCalculator(MetricCalculator):
+    """Calculate Altman Z-Score (bankruptcy risk predictor)."""
+
+    def __init__(self):
+        super().__init__('altman_z_score', 'Altman Z-Score')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        # Get required values
+        current_assets = self.get_value(raw_data, 'financials.current_assets')
+        current_liabilities = self.get_value(raw_data, 'financials.current_liabilities')
+        total_assets = self.get_value(raw_data, 'financials.total_assets')
+        total_liabilities = self.get_value(raw_data, 'financials.total_liabilities')
+        retained_earnings = self.get_value(raw_data, 'financials.retained_earnings')
+        ebit = self.get_value(raw_data, 'financials.ebit')
+        market_cap = self.get_value(raw_data, 'market_data.market_cap')
+        revenue = self.get_value(raw_data, 'financials.revenue')
+
+        if total_assets is None or total_assets == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing total_assets'
+            )
+
+        # Calculate components
+        # A = Working Capital / Total Assets
+        working_capital = (current_assets or 0) - (current_liabilities or 0)
+        A = working_capital / total_assets
+
+        # B = Retained Earnings / Total Assets
+        B = (retained_earnings or 0) / total_assets
+
+        # C = EBIT / Total Assets
+        C = (ebit or 0) / total_assets
+
+        # D = Market Value of Equity / Total Liabilities
+        if total_liabilities and total_liabilities > 0:
+            D = (market_cap or 0) / total_liabilities
+        else:
+            D = 0
+
+        # E = Revenue / Total Assets
+        E = (revenue or 0) / total_assets
+
+        # Z-Score = 1.2A + 1.4B + 3.3C + 0.6D + 1.0E
+        z_score = 1.2 * A + 1.4 * B + 3.3 * C + 0.6 * D + 1.0 * E
+
+        # Classification
+        if z_score >= 3.0:
+            risk = "safe"
+        elif z_score >= 1.8:
+            risk = "grey_zone"
+        else:
+            risk = "distress"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=z_score,
+            success=True,
+            metadata={
+                'working_capital_ratio': A,
+                'retained_earnings_ratio': B,
+                'ebit_ratio': C,
+                'equity_to_debt_ratio': D,
+                'asset_turnover': E,
+                'risk': risk
+            }
+        )
+
+
+class CashConversionCycleCalculator(MetricCalculator):
+    """Calculate Cash Conversion Cycle (DSO + DIO - DPO)."""
+
+    def __init__(self):
+        super().__init__('cash_conversion_cycle', 'Cash Conversion Cycle')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        revenue = self.get_value(raw_data, 'financials.revenue')
+        accounts_receivable = self.get_value(raw_data, 'financials.accounts_receivable')
+        inventory = self.get_value(raw_data, 'financials.inventory')
+        accounts_payable = self.get_value(raw_data, 'financials.accounts_payable')
+        gross_profit = self.get_value(raw_data, 'financials.gross_profit')
+
+        if revenue is None or revenue == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing revenue'
+            )
+
+        # Calculate COGS (Revenue - Gross Profit)
+        cogs = revenue - (gross_profit or 0)
+        if cogs <= 0:
+            cogs = revenue * 0.6  # Estimate if not available
+
+        # DSO = (Accounts Receivable / Revenue) * 365
+        dso = ((accounts_receivable or 0) / revenue) * 365
+
+        # DIO = (Inventory / COGS) * 365
+        dio = ((inventory or 0) / cogs) * 365 if cogs > 0 else 0
+
+        # DPO = (Accounts Payable / COGS) * 365
+        dpo = ((accounts_payable or 0) / cogs) * 365 if cogs > 0 else 0
+
+        # Cash Conversion Cycle
+        ccc = dso + dio - dpo
+
+        # Lower is better (or even negative like Amazon)
+        if ccc < 0:
+            efficiency = "excellent"
+        elif ccc <= 30:
+            efficiency = "good"
+        elif ccc <= 60:
+            efficiency = "moderate"
+        else:
+            efficiency = "poor"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=ccc,
+            success=True,
+            metadata={
+                'dso': dso,
+                'dio': dio,
+                'dpo': dpo,
+                'efficiency': efficiency
+            }
+        )
+
+
+class GrahamNumberCalculator(MetricCalculator):
+    """Calculate Graham Number (Benjamin Graham's intrinsic value)."""
+
+    def __init__(self):
+        super().__init__('graham_number', 'Graham Number')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        import math
+
+        net_income = self.get_value(raw_data, 'financials.net_income')
+        equity = self.get_value(raw_data, 'financials.shareholders_equity')
+        shares_outstanding = self.get_value(raw_data, 'market_data.shares_outstanding')
+        price = self.get_value(raw_data, 'price.close')
+
+        if net_income is None or equity is None or shares_outstanding is None:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing net_income, shareholders_equity, or shares_outstanding'
+            )
+
+        if net_income <= 0 or equity <= 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Net income or equity is negative'
+            )
+
+        eps = net_income / shares_outstanding
+        bvps = equity / shares_outstanding
+
+        # Graham Number = sqrt(22.5 * EPS * BVPS)
+        graham_number = math.sqrt(22.5 * eps * bvps)
+
+        # Calculate margin of safety if price available
+        margin_of_safety = None
+        if price and price > 0:
+            margin_of_safety = (graham_number - price) / graham_number
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value={
+                'graham_number': graham_number,
+                'current_price': price,
+                'margin_of_safety': margin_of_safety,
+            },
+            success=True,
+            metadata={
+                'eps': eps,
+                'bvps': bvps,
+            }
+        )
+
+
+class CROICCalculator(MetricCalculator):
+    """Calculate Cash Return on Invested Capital."""
+
+    def __init__(self):
+        super().__init__('cash_return_on_invested_capital', 'Cash Return on Invested Capital (CROIC)')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        operating_cf = self.get_value(raw_data, 'financials.operating_cash_flow')
+        capex = self.get_value(raw_data, 'financials.capital_expenditure')
+        total_debt = self.get_value(raw_data, 'financials.total_debt')
+        equity = self.get_value(raw_data, 'financials.shareholders_equity')
+        cash = self.get_value(raw_data, 'financials.cash_and_equivalents')
+
+        if operating_cf is None or total_debt is None or equity is None:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing operating_cash_flow, total_debt, or shareholders_equity'
+            )
+
+        # Free Cash Flow
+        fcf = operating_cf + (capex or 0)
+
+        # Invested Capital
+        invested_capital = total_debt + equity - (cash or 0)
+
+        if invested_capital <= 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Invested capital is zero or negative'
+            )
+
+        croic = fcf / invested_capital
+
+        # Classification
+        if croic >= 0.15:
+            quality = "excellent"
+        elif croic >= 0.10:
+            quality = "good"
+        elif croic >= 0.05:
+            quality = "acceptable"
+        else:
+            quality = "poor"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=croic,
+            success=True,
+            metadata={
+                'free_cash_flow': fcf,
+                'invested_capital': invested_capital,
+                'quality': quality
+            }
+        )
+
+
+class GrossMarginStabilityCalculator(MetricCalculator):
+    """Calculate Gross Margin Stability (Std Dev of Gross Margin)."""
+
+    def __init__(self):
+        super().__init__('gross_margin_stability', 'Gross Margin Stability')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        import statistics
+
+        financials_history = self.get_value(raw_data, 'financials_history', [])
+
+        # Collect gross margins from history
+        gross_margins = []
+        for fin in financials_history:
+            gm = fin.get('gross_margin')
+            if gm is not None:
+                gross_margins.append(gm)
+
+        # Add current
+        current_gm = self.get_value(raw_data, 'financials.gross_margin')
+        if current_gm is None:
+            # Calculate from raw data
+            gross_profit = self.get_value(raw_data, 'financials.gross_profit')
+            revenue = self.get_value(raw_data, 'financials.revenue')
+            if gross_profit and revenue and revenue > 0:
+                current_gm = gross_profit / revenue
+
+        if current_gm:
+            gross_margins.append(current_gm)
+
+        if len(gross_margins) < 3:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Need at least 3 years of gross margin data'
+            )
+
+        # Calculate standard deviation and coefficient of variation
+        mean_margin = statistics.mean(gross_margins)
+        std_margin = statistics.stdev(gross_margins)
+
+        if mean_margin == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Mean gross margin is zero'
+            )
+
+        cv = std_margin / mean_margin
+        stability_score = max(0, 1 - cv)
+
+        # Classification
+        if stability_score >= 0.9:
+            stability = "very_stable"
+        elif stability_score >= 0.8:
+            stability = "stable"
+        elif stability_score >= 0.6:
+            stability = "moderate"
+        else:
+            stability = "volatile"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=stability_score,
+            success=True,
+            metadata={
+                'mean_gross_margin': mean_margin,
+                'std_dev': std_margin,
+                'coefficient_of_variation': cv,
+                'stability': stability,
+                'years_analyzed': len(gross_margins)
+            }
+        )
+
+
+class DebtToEBITDACalculator(MetricCalculator):
+    """Calculate Debt to EBITDA ratio."""
+
+    def __init__(self):
+        super().__init__('debt_to_ebitda', 'Debt to EBITDA')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        total_debt = self.get_value(raw_data, 'financials.total_debt')
+        ebitda = self.get_value(raw_data, 'financials.ebitda')
+
+        if total_debt is None or ebitda is None or ebitda <= 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing total_debt or ebitda (or ebitda is negative)'
+            )
+
+        ratio = total_debt / ebitda
+
+        # Classification
+        if ratio <= 2:
+            leverage = "low"
+        elif ratio <= 3:
+            leverage = "moderate"
+        elif ratio <= 4:
+            leverage = "high"
+        else:
+            leverage = "very_high"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=ratio,
+            success=True,
+            metadata={
+                'total_debt': total_debt,
+                'ebitda': ebitda,
+                'leverage': leverage
+            }
+        )
+
+
+class NetDebtToEquityCalculator(MetricCalculator):
+    """Calculate Net Debt to Equity ratio."""
+
+    def __init__(self):
+        super().__init__('net_debt_to_equity', 'Net Debt to Equity')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        total_debt = self.get_value(raw_data, 'financials.total_debt')
+        cash = self.get_value(raw_data, 'financials.cash_and_equivalents')
+        equity = self.get_value(raw_data, 'financials.shareholders_equity')
+
+        if total_debt is None or equity is None or equity == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing total_debt or shareholders_equity'
+            )
+
+        net_debt = total_debt - (cash or 0)
+        ratio = net_debt / equity
+
+        # Negative net debt means cash > debt (good)
+        if ratio < 0:
+            leverage = "net_cash_position"
+        elif ratio <= 0.5:
+            leverage = "low"
+        elif ratio <= 1.0:
+            leverage = "moderate"
+        else:
+            leverage = "high"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=ratio,
+            success=True,
+            metadata={
+                'net_debt': net_debt,
+                'total_debt': total_debt,
+                'cash': cash,
+                'equity': equity,
+                'leverage': leverage
+            }
+        )
+
+
+class AccrualsRatioCalculator(MetricCalculator):
+    """Calculate Accruals Ratio (earnings quality indicator)."""
+
+    def __init__(self):
+        super().__init__('accruals_ratio', 'Accruals Ratio')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        net_income = self.get_value(raw_data, 'financials.net_income')
+        operating_cf = self.get_value(raw_data, 'financials.operating_cash_flow')
+        total_assets = self.get_value(raw_data, 'financials.total_assets')
+
+        if net_income is None or operating_cf is None or total_assets is None or total_assets == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing net_income, operating_cash_flow, or total_assets'
+            )
+
+        accruals = net_income - operating_cf
+        accruals_ratio = accruals / total_assets
+
+        # Low accruals = higher quality earnings
+        if accruals_ratio <= 0:
+            quality = "high"
+        elif accruals_ratio <= 0.05:
+            quality = "good"
+        elif accruals_ratio <= 0.10:
+            quality = "moderate"
+        else:
+            quality = "low"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=accruals_ratio,
+            success=True,
+            metadata={
+                'accruals': accruals,
+                'net_income': net_income,
+                'operating_cash_flow': operating_cf,
+                'total_assets': total_assets,
+                'quality': quality
+            }
+        )
+
+
+class AssetTurnoverCalculator(MetricCalculator):
+    """Calculate Asset Turnover ratio."""
+
+    def __init__(self):
+        super().__init__('asset_turnover', 'Asset Turnover')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        revenue = self.get_value(raw_data, 'financials.revenue')
+        total_assets = self.get_value(raw_data, 'financials.total_assets')
+
+        if revenue is None or total_assets is None or total_assets == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing revenue or total_assets'
+            )
+
+        turnover = revenue / total_assets
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=turnover,
+            success=True,
+            metadata={
+                'revenue': revenue,
+                'total_assets': total_assets
+            }
+        )
+
+
+class SustainableGrowthRateCalculator(MetricCalculator):
+    """Calculate Sustainable Growth Rate (ROE * (1 - Payout Ratio))."""
+
+    def __init__(self):
+        super().__init__('sustainable_growth_rate', 'Sustainable Growth Rate')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        net_income = self.get_value(raw_data, 'financials.net_income')
+        equity = self.get_value(raw_data, 'financials.shareholders_equity')
+        dividends_paid = self.get_value(raw_data, 'cash_flow.dividends_paid')
+
+        if net_income is None or equity is None or equity == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing net_income or shareholders_equity'
+            )
+
+        roe = net_income / equity
+
+        # Calculate retention ratio (1 - payout ratio)
+        if dividends_paid and net_income != 0:
+            payout_ratio = abs(dividends_paid) / net_income
+            retention_ratio = 1 - payout_ratio
+        else:
+            retention_ratio = 1.0  # No dividends = 100% retention
+
+        sustainable_growth = roe * retention_ratio
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=sustainable_growth,
+            success=True,
+            metadata={
+                'roe': roe,
+                'retention_ratio': retention_ratio,
+                'payout_ratio': 1 - retention_ratio
+            }
+        )
+
+
+class CapExToDepreciationCalculator(MetricCalculator):
+    """Calculate CapEx to Depreciation ratio."""
+
+    def __init__(self):
+        super().__init__('capex_to_depreciation', 'CapEx to Depreciation')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        capex = self.get_value(raw_data, 'financials.capital_expenditure')
+        depreciation = self.get_value(raw_data, 'financials.depreciation_amortization')
+
+        if capex is None or depreciation is None or depreciation == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing capital_expenditure or depreciation_amortization'
+            )
+
+        # capex is negative, take absolute value
+        ratio = abs(capex) / depreciation
+
+        # Classification
+        if ratio < 1.0:
+            mode = "underinvesting"
+        elif ratio <= 1.5:
+            mode = "maintenance"
+        elif ratio <= 2.0:
+            mode = "growth"
+        else:
+            mode = "aggressive_growth"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=ratio,
+            success=True,
+            metadata={
+                'capital_expenditure': abs(capex),
+                'depreciation': depreciation,
+                'mode': mode
+            }
+        )
+
+
+class SloanRatioCalculator(MetricCalculator):
+    """Calculate Sloan Ratio (earnings quality)."""
+
+    def __init__(self):
+        super().__init__('sloan_ratio', 'Sloan Ratio')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        net_income = self.get_value(raw_data, 'financials.net_income')
+        operating_cf = self.get_value(raw_data, 'financials.operating_cash_flow')
+        capex = self.get_value(raw_data, 'financials.capital_expenditure')
+        total_assets = self.get_value(raw_data, 'financials.total_assets')
+
+        if net_income is None or operating_cf is None or total_assets is None or total_assets == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing net_income, operating_cash_flow, or total_assets'
+            )
+
+        fcf = operating_cf + (capex or 0)
+        sloan_ratio = (net_income - fcf) / total_assets
+
+        # High Sloan ratio = potential earnings manipulation
+        if sloan_ratio <= 0:
+            quality = "high"
+        elif sloan_ratio <= 0.10:
+            quality = "good"
+        elif sloan_ratio <= 0.25:
+            quality = "moderate"
+        else:
+            quality = "low"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=sloan_ratio,
+            success=True,
+            metadata={
+                'net_income': net_income,
+                'free_cash_flow': fcf,
+                'total_assets': total_assets,
+                'quality': quality
+            }
+        )
+
+
+# ===== SEC EDGAR SPECIFIC METRICS =====
+
+class RDToRevenueCalculator(MetricCalculator):
+    """Calculate R&D to Revenue ratio (from SEC EDGAR)."""
+
+    def __init__(self):
+        super().__init__('rd_to_revenue', 'R&D to Revenue')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        rd_expense = self.get_value(raw_data, 'financials.research_and_development')
+        # Also try sec_edgar namespace
+        if rd_expense is None:
+            rd_expense = self.get_value(raw_data, 'sec_edgar.research_and_development')
+        revenue = self.get_value(raw_data, 'financials.revenue')
+
+        if rd_expense is None or revenue is None or revenue == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing research_and_development or revenue (requires SEC EDGAR data)'
+            )
+
+        ratio = rd_expense / revenue
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=ratio,
+            success=True,
+            metadata={
+                'rd_expense': rd_expense,
+                'revenue': revenue
+            }
+        )
+
+
+class SGAToGrossProfitCalculator(MetricCalculator):
+    """Calculate SG&A to Gross Profit ratio (Munger's efficiency metric)."""
+
+    def __init__(self):
+        super().__init__('sga_to_gross_profit', 'SG&A to Gross Profit')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        sga = self.get_value(raw_data, 'financials.selling_general_admin')
+        if sga is None:
+            sga = self.get_value(raw_data, 'sec_edgar.selling_general_admin')
+        gross_profit = self.get_value(raw_data, 'financials.gross_profit')
+
+        if sga is None or gross_profit is None or gross_profit == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing selling_general_admin or gross_profit (requires SEC EDGAR data)'
+            )
+
+        ratio = sga / gross_profit
+
+        # Munger prefers <30%
+        if ratio <= 0.20:
+            efficiency = "excellent"
+        elif ratio <= 0.30:
+            efficiency = "good"
+        elif ratio <= 0.50:
+            efficiency = "moderate"
+        else:
+            efficiency = "poor"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=ratio,
+            success=True,
+            metadata={
+                'sga_expense': sga,
+                'gross_profit': gross_profit,
+                'efficiency': efficiency
+            }
+        )
+
+
+class GoodwillToAssetsCalculator(MetricCalculator):
+    """Calculate Goodwill to Assets ratio (from SEC EDGAR)."""
+
+    def __init__(self):
+        super().__init__('goodwill_to_assets', 'Goodwill to Assets')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        goodwill = self.get_value(raw_data, 'financials.goodwill')
+        if goodwill is None:
+            goodwill = self.get_value(raw_data, 'sec_edgar.goodwill')
+        total_assets = self.get_value(raw_data, 'financials.total_assets')
+
+        if goodwill is None or total_assets is None or total_assets == 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing goodwill or total_assets (requires SEC EDGAR data)'
+            )
+
+        ratio = goodwill / total_assets
+
+        # High goodwill may indicate overpaid acquisitions
+        if ratio <= 0.10:
+            acquisition_risk = "low"
+        elif ratio <= 0.25:
+            acquisition_risk = "moderate"
+        elif ratio <= 0.40:
+            acquisition_risk = "elevated"
+        else:
+            acquisition_risk = "high"
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=ratio,
+            success=True,
+            metadata={
+                'goodwill': goodwill,
+                'total_assets': total_assets,
+                'acquisition_risk': acquisition_risk
+            }
+        )
+
+
+class ReturnOnTangibleEquityCalculator(MetricCalculator):
+    """Calculate Return on Tangible Equity (ROE without goodwill distortions)."""
+
+    def __init__(self):
+        super().__init__('return_on_tangible_equity', 'Return on Tangible Equity (ROTE)')
+
+    def calculate(self, raw_data: Dict[str, Any]) -> MetricResult:
+        net_income = self.get_value(raw_data, 'financials.net_income')
+        equity = self.get_value(raw_data, 'financials.shareholders_equity')
+        goodwill = self.get_value(raw_data, 'financials.goodwill') or self.get_value(raw_data, 'sec_edgar.goodwill') or 0
+        intangibles = self.get_value(raw_data, 'financials.intangible_assets') or self.get_value(raw_data, 'sec_edgar.intangible_assets') or 0
+
+        if net_income is None or equity is None:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Missing net_income or shareholders_equity'
+            )
+
+        tangible_equity = equity - goodwill - intangibles
+
+        if tangible_equity <= 0:
+            return MetricResult(
+                metric_id=self.metric_id,
+                value=None,
+                success=False,
+                error='Tangible equity is zero or negative'
+            )
+
+        rote = net_income / tangible_equity
+
+        return MetricResult(
+            metric_id=self.metric_id,
+            value=rote,
+            success=True,
+            metadata={
+                'net_income': net_income,
+                'shareholders_equity': equity,
+                'goodwill': goodwill,
+                'intangibles': intangibles,
+                'tangible_equity': tangible_equity
+            }
+        )
+
+
 # ===== CALCULATOR REGISTRY =====
 
 def get_all_calculators() -> List[MetricCalculator]:
@@ -1723,11 +2726,18 @@ def get_all_calculators() -> List[MetricCalculator]:
         ROECalculator(),
         OperatingMarginsCalculator(),
         OwnerEarningsCalculator(),
+        GrossProfitMarginCalculator(),
+        CROICCalculator(),
+        AssetTurnoverCalculator(),
 
         # Financial Strength
         DebtToEquityCalculator(),
         CapexRatioCalculator(),
         CurrentRatioCalculator(),
+        LongTermDebtToEarningsCalculator(),
+        DebtToEBITDACalculator(),
+        NetDebtToEquityCalculator(),
+        AltmanZScoreCalculator(),
 
         # Valuation
         PriceToEarningsCalculator(),
@@ -1736,25 +2746,43 @@ def get_all_calculators() -> List[MetricCalculator]:
         EVToEBITDACalculator(),
         MarginOfSafetyCalculator(),
         PEGRatioCalculator(),
+        PriceToFCFCalculator(),
+        FCFYieldCalculator(),
+        GrahamNumberCalculator(),
 
         # Growth
         EPSGrowthCalculator(),
         BookValuePerShareGrowthCalculator(),
         EarningsStabilityCalculator(),
+        SustainableGrowthRateCalculator(),
 
         # Capital Allocation
         DividendMetricsCalculator(),
         DividendHistoryCalculator(),
         ReturnOnRetainedEarningsCalculator(),
         WACCvsROICSpreadCalculator(),
+        CapExToDepreciationCalculator(),
 
         # Long-term Performance
         TenYearAverageROCECalculator(),
+
+        # Quality & Efficiency
+        QualityOfEarningsCalculator(),
+        AccrualsRatioCalculator(),
+        SloanRatioCalculator(),
+        CashConversionCycleCalculator(),
+        GrossMarginStabilityCalculator(),
 
         # Moat
         EconomicMoatScoreCalculator(),
         ConsistencyScoreCalculator(),
         PiotroskiFScoreCalculator(),
+
+        # SEC EDGAR Specific (require SEC EDGAR data)
+        RDToRevenueCalculator(),
+        SGAToGrossProfitCalculator(),
+        GoodwillToAssetsCalculator(),
+        ReturnOnTangibleEquityCalculator(),
     ]
 
 

@@ -1,6 +1,6 @@
 """Pydantic models for API request bodies."""
 
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -32,6 +32,34 @@ class ValidateTickerRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "symbol": "AAPL"
+            }
+        }
+
+
+class ValidateTickersBatchRequest(BaseModel):
+    """Request to validate multiple ticker symbols."""
+
+    symbols: List[str] = Field(..., min_length=1, max_length=50, description="List of ticker symbols to validate")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "symbols": ["AAPL", "MSFT", "GOOGL"]
+            }
+        }
+
+
+class AddTickersBatchRequest(BaseModel):
+    """Request to add multiple tickers to the watchlist."""
+
+    symbols: List[str] = Field(..., min_length=1, max_length=50, description="List of ticker symbols to add")
+    skip_validation: bool = Field(False, description="Skip ticker validation")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "symbols": ["AAPL", "MSFT", "GOOGL"],
+                "skip_validation": False
             }
         }
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Dict, Iterable, Set, Tuple
 
 import requests
@@ -24,12 +25,13 @@ class PolygonClient:
 
     # -------- public API --------
 
-    def validate_ticker(self, ticker: str) -> Tuple[bool, str, str]:
+    def validate_ticker(self, ticker: str, max_retries: int = 3) -> Tuple[bool, str, str]:
         """
         Validate if a ticker symbol exists and get company name.
 
         Args:
             ticker: Stock ticker symbol to validate
+            max_retries: Maximum number of retries on rate limit (429) errors
 
         Returns:
             Tuple of (is_valid, company_name, error_message)
@@ -38,22 +40,37 @@ class PolygonClient:
             - error_message: Error description if validation fails
         """
         ticker = ticker.upper()
-        try:
-            payload = self._make_request(f"/v3/reference/tickers/{ticker}")
-            result = payload.get("results") or {}
 
-            if not result:
-                return False, "", f"Ticker '{ticker}' not found"
+        for attempt in range(max_retries + 1):
+            try:
+                payload = self._make_request(f"/v3/reference/tickers/{ticker}")
+                result = payload.get("results") or {}
 
-            company_name = result.get("name", ticker)
-            return True, company_name, ""
+                if not result:
+                    return False, "", f"Ticker '{ticker}' not found"
 
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
-                return False, "", f"Ticker '{ticker}' does not exist"
-            return False, "", f"API error: {str(e)}"
-        except Exception as e:
-            return False, "", f"Validation failed: {str(e)}"
+                company_name = result.get("name", ticker)
+                return True, company_name, ""
+
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 404:
+                    return False, "", f"Ticker '{ticker}' does not exist"
+                if e.response.status_code == 429 and attempt < max_retries:
+                    # Rate limited - wait with exponential backoff and retry
+                    wait_time = (2 ** attempt) * 0.5  # 0.5s, 1s, 2s
+                    logger.warning(f"Rate limited for {ticker}, retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                if e.response.status_code == 429:
+                    # Rate limited after all retries - assume valid (rate limit != invalid ticker)
+                    logger.warning(f"Rate limit exceeded for {ticker}, assuming valid")
+                    return True, ticker, ""
+                return False, "", f"API error: {str(e)}"
+            except Exception as e:
+                return False, "", f"Validation failed: {str(e)}"
+
+        # Rate limit exhausted - assume valid rather than blocking the user
+        return True, ticker, ""
 
     def fetch_fields(
         self,

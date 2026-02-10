@@ -16,6 +16,7 @@ from clients.polygon_client import PolygonClient
 from clients.alpha_vantage_client import AlphaVantageClient
 from clients.yahoo_finance_client import YahooFinanceClient
 from clients.financial_datasets_client import FinancialDatasetsClient
+from clients.sec_edgar_client import SECEdgarClient
 
 
 # Singleton instances (created once per app lifecycle)
@@ -57,6 +58,16 @@ def get_data_source_router() -> DataSourceRouter:
         av_api_key = store.get_api_key("alpha_vantage")
         if av_api_key:
             clients["alpha_vantage"] = AlphaVantageClient(av_api_key)
+
+        # SEC EDGAR client (FREE - no API key needed)
+        try:
+            # Use app name and contact for User-Agent (required by SEC)
+            clients["sec_edgar"] = SECEdgarClient(
+                user_agent="InvestingApp contact@example.com"
+            )
+            print(f"✓ SEC EDGAR client initialized successfully (FREE)")
+        except Exception as e:
+            print(f"✗ Failed to initialize SEC EDGAR client: {e}")
 
         # Yahoo Finance client (no API key needed)
         try:
@@ -117,3 +128,17 @@ def get_polygon_client() -> Optional[PolygonClient]:
     if not api_key:
         return None
     return PolygonClient(api_key)
+
+
+# Singleton SEC EDGAR client for validation (caches ticker directory)
+_sec_edgar_validator: Optional[SECEdgarClient] = None
+
+
+def get_sec_edgar_client() -> SECEdgarClient:
+    """Get singleton SEC EDGAR client for ticker validation."""
+    global _sec_edgar_validator
+    if _sec_edgar_validator is None:
+        _sec_edgar_validator = SECEdgarClient(
+            user_agent="InvestingApp contact@example.com"
+        )
+    return _sec_edgar_validator

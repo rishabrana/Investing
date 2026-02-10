@@ -154,6 +154,43 @@ export interface ValidateTickerRequest {
   symbol: string;
 }
 
+export interface ValidateTickersBatchRequest {
+  symbols: string[];
+}
+
+export interface ValidateTickerResult {
+  is_valid: boolean;
+  symbol: string;
+  company_name: string | null;
+  error: string | null;
+}
+
+export interface ValidateTickersBatchResponse {
+  results: ValidateTickerResult[];
+  valid_count: number;
+  invalid_count: number;
+}
+
+export interface AddTickersBatchRequest {
+  symbols: string[];
+  skip_validation?: boolean;
+}
+
+export interface AddTickerBatchResult {
+  symbol: string;
+  success: boolean;
+  message: string;
+  company_name?: string | null;
+  error?: string | null;
+}
+
+export interface AddTickersBatchResponse {
+  results: AddTickerBatchResult[];
+  added_count: number;
+  failed_count: number;
+  skipped_count: number;
+}
+
 export interface RefreshStockRequest {
   force?: boolean;
 }

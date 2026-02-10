@@ -4,5 +4,12 @@ from clients.polygon_client import PolygonClient
 from clients.alpha_vantage_client import AlphaVantageClient
 from clients.yahoo_finance_client import YahooFinanceClient
 from clients.financial_datasets_client import FinancialDatasetsClient
+from clients.sec_edgar_client import SECEdgarClient
 
-__all__ = ["PolygonClient", "AlphaVantageClient", "YahooFinanceClient", "FinancialDatasetsClient"]
+__all__ = [
+    "PolygonClient",
+    "AlphaVantageClient",
+    "YahooFinanceClient",
+    "FinancialDatasetsClient",
+    "SECEdgarClient",
+]

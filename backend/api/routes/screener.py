@@ -56,11 +56,11 @@ def score_metric(value: float | None, target_min: float | None = None, target_ma
     if not inverse and target_min is not None:
         if value >= target_min:
             # Scale beyond target gets full marks
-            score = min(1.0, value / target_min)
+            score = min(1.0, value / target_min) if target_min != 0 else 1.0
             passes = True
         else:
             # Partial score for being close
-            score = value / target_min
+            score = value / target_min if target_min != 0 else 0.0
             passes = False
         return (score, passes)
 
@@ -73,9 +73,11 @@ async def get_value_screener(
     metrics_service: MetricsService = Depends(get_metrics_service)
 ):
     """
-    Screen all stocks in watchlist using value investing criteria.
+    Screen all stocks in watchlist using Buffett/Munger value investing criteria.
 
     Returns stocks ranked by overall score (0-1 scale) based on:
+
+    Core Criteria:
     - P/E Ratio (< 20)
     - P/B Ratio (< 3.0)
     - PEG Ratio (< 1.0)
@@ -86,6 +88,19 @@ async def get_value_screener(
     - Dividend History (5+ consecutive years)
     - Operating Margin (> 10%)
     - Piotroski F-Score (>= 7)
+
+    Buffett/Munger Criteria:
+    - Gross Profit Margin (> 40%)
+    - Price to FCF (< 15)
+    - FCF Yield (> 5%)
+    - Quality of Earnings (> 1.0)
+    - CROIC (> 15%)
+    - Altman Z-Score (> 3.0)
+    - Debt to EBITDA (< 3.0)
+    - LT Debt to Earnings (< 4 years)
+    - SG&A to Gross Profit (< 80%)
+    - Return on Tangible Equity (> 15%)
+    - Graham Number (undervalued if margin > 0%)
     """
     # Get watchlist
     watchlist = store.load_watchlist("default")
@@ -248,6 +263,134 @@ async def get_value_screener(
                 target=">= 7"
             ))
 
+            # ===== Buffett/Munger Additional Criteria =====
+
+            # 11. Gross Profit Margin (target > 40% - Buffett's moat indicator)
+            gpm = profitability.get('gross_profit_margin')
+            gpm_score, gpm_passes = score_metric(gpm, target_min=0.40, inverse=False)
+            scores.append(ScreenerScore(
+                metric_name="Gross Profit Margin",
+                value=gpm,
+                score=gpm_score,
+                passes=gpm_passes,
+                target="> 40%"
+            ))
+
+            # 12. Price to FCF (target < 15 - Buffett's preferred valuation)
+            p_fcf = valuation.get('price_to_fcf')
+            pfcf_score, pfcf_passes = score_metric(p_fcf, target_max=15.0, inverse=True)
+            scores.append(ScreenerScore(
+                metric_name="Price to FCF",
+                value=p_fcf,
+                score=pfcf_score,
+                passes=pfcf_passes,
+                target="< 15"
+            ))
+
+            # 13. FCF Yield (target > 5%)
+            fcf_y = valuation.get('fcf_yield')
+            fcfy_score, fcfy_passes = score_metric(fcf_y, target_min=0.05, inverse=False)
+            scores.append(ScreenerScore(
+                metric_name="FCF Yield",
+                value=fcf_y,
+                score=fcfy_score,
+                passes=fcfy_passes,
+                target="> 5%"
+            ))
+
+            # 14. Quality of Earnings (target > 1.0 - OCF/Net Income)
+            qoe = profitability.get('quality_of_earnings')
+            qoe_score, qoe_passes = score_metric(qoe, target_min=1.0, inverse=False)
+            scores.append(ScreenerScore(
+                metric_name="Quality of Earnings",
+                value=qoe,
+                score=qoe_score,
+                passes=qoe_passes,
+                target="> 1.0"
+            ))
+
+            # 15. Cash Return on Invested Capital (target > 15%)
+            croic = profitability.get('cash_return_on_invested_capital')
+            croic_score, croic_passes = score_metric(croic, target_min=0.15, inverse=False)
+            scores.append(ScreenerScore(
+                metric_name="CROIC",
+                value=croic,
+                score=croic_score,
+                passes=croic_passes,
+                target="> 15%"
+            ))
+
+            # 16. Altman Z-Score (target > 3.0 - safe from bankruptcy)
+            z_score = financial_strength.get('altman_z_score')
+            zs_score, zs_passes = score_metric(z_score, target_min=3.0, inverse=False)
+            scores.append(ScreenerScore(
+                metric_name="Altman Z-Score",
+                value=z_score,
+                score=zs_score,
+                passes=zs_passes,
+                target="> 3.0"
+            ))
+
+            # 17. Debt to EBITDA (target < 3.0)
+            d_ebitda = financial_strength.get('debt_to_ebitda')
+            de_score2, de_passes2 = score_metric(d_ebitda, target_max=3.0, inverse=True)
+            scores.append(ScreenerScore(
+                metric_name="Debt/EBITDA",
+                value=d_ebitda,
+                score=de_score2,
+                passes=de_passes2,
+                target="< 3.0"
+            ))
+
+            # 18. Long-term Debt to Earnings (target < 4 years to pay off)
+            ltd_earnings = financial_strength.get('long_term_debt_to_earnings')
+            ltd_score, ltd_passes = score_metric(ltd_earnings, target_max=4.0, inverse=True)
+            scores.append(ScreenerScore(
+                metric_name="LT Debt/Earnings",
+                value=ltd_earnings,
+                score=ltd_score,
+                passes=ltd_passes,
+                target="< 4 years"
+            ))
+
+            # 19. SG&A to Gross Profit (target < 80% - Munger's efficiency)
+            sga_gp = profitability.get('sga_to_gross_profit')
+            sga_score, sga_passes = score_metric(sga_gp, target_max=0.80, inverse=True)
+            scores.append(ScreenerScore(
+                metric_name="SG&A/Gross Profit",
+                value=sga_gp,
+                score=sga_score,
+                passes=sga_passes,
+                target="< 80%"
+            ))
+
+            # 20. Return on Tangible Equity (target > 15%)
+            rote = profitability.get('return_on_tangible_equity')
+            rote_score, rote_passes = score_metric(rote, target_min=0.15, inverse=False)
+            scores.append(ScreenerScore(
+                metric_name="Return on Tangible Equity",
+                value=rote,
+                score=rote_score,
+                passes=rote_passes,
+                target="> 15%"
+            ))
+
+            # 21. Graham Number (undervalued when margin_of_safety > 0)
+            graham_data = valuation.get('graham_number', {})
+            if isinstance(graham_data, dict):
+                graham_mos = graham_data.get('margin_of_safety')
+                gn_score, gn_passes = score_metric(graham_mos, target_min=0.0, inverse=False)
+            else:
+                graham_mos = None
+                gn_score, gn_passes = 0.0, False
+            scores.append(ScreenerScore(
+                metric_name="Graham Number",
+                value=graham_mos,
+                score=gn_score,
+                passes=gn_passes,
+                target="Undervalued (MoS > 0%)"
+            ))
+
             # Calculate overall score
             total_score = sum(s.score for s in scores)
             max_score = len(scores)
@@ -279,5 +422,5 @@ async def get_value_screener(
     return ScreenerResponse(
         stocks=screened_stocks,
         screened_at=datetime.now().isoformat(),
-        criteria_count=len(screened_stocks[0].scores) if screened_stocks else 10
+        criteria_count=len(screened_stocks[0].scores) if screened_stocks else 21
     )

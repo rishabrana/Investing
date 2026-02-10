@@ -1,5 +1,5 @@
 # Data Source Mapping Configuration
-# Priority: financial_datasets (1st) -> polygon.io (2nd) -> alpha_vantage (3rd) -> yahoo_finance (4th)
+# Priority: financial_datasets (1st) -> polygon.io (2nd) -> sec_edgar (3rd) -> alpha_vantage (4th) -> yahoo_finance (5th)
 
 data_sources:
   # Price Data
@@ -126,6 +126,41 @@ data_sources:
     tertiary: yahoo_finance
     endpoint: /financials/balance-sheets
     field: retained_earnings
+
+  # SEC EDGAR XBRL Fields (FREE - not available from other APIs)
+  financials.goodwill:
+    primary: sec_edgar
+    endpoint: /api/xbrl/companyfacts
+    xbrl_tag: Goodwill
+    note: Goodwill from acquisitions, used for ROTA/ROTE calculations
+
+  financials.intangible_assets:
+    primary: sec_edgar
+    endpoint: /api/xbrl/companyfacts
+    xbrl_tag: IntangibleAssetsNetExcludingGoodwill
+    note: Intangible assets excluding goodwill
+
+  financials.research_and_development:
+    primary: sec_edgar
+    endpoint: /api/xbrl/companyfacts
+    xbrl_tag: ResearchAndDevelopmentExpense
+    note: R&D expense for R&D to Revenue ratio
+
+  financials.selling_general_admin:
+    primary: sec_edgar
+    endpoint: /api/xbrl/companyfacts
+    xbrl_tag: SellingGeneralAndAdministrativeExpense
+    note: SG&A expense for SG&A to Gross Profit ratio
+
+  insider.transactions:
+    primary: sec_edgar
+    endpoint: /submissions
+    note: Form 4 insider transactions from SEC filings
+
+  insider.transaction_count:
+    primary: sec_edgar
+    endpoint: /submissions
+    note: Count of recent insider transactions
 
   # Income Statement - financial_datasets Primary
   financials.revenue:
@@ -421,9 +456,10 @@ data_sources:
 api_priority:
   - financial_datasets      # Primary - financial statements, price close, history
   - polygon.io              # Secondary - price OHLC, market data, fallback financials
-  - financial_modeling_prep # Tertiary - beta, estimates, WACC components
-  - alpha_vantage           # Quaternary - treasury yields, backup financials
-  - finnhub                 # Quinary - analyst estimates
+  - sec_edgar               # Tertiary - FREE XBRL data (goodwill, R&D, SG&A, intangibles, insider)
+  - financial_modeling_prep # Quaternary - beta, estimates, WACC components
+  - alpha_vantage           # Quinary - treasury yields, backup financials
+  - finnhub                 # Senary - analyst estimates, M&A data
   - yahoo_finance           # Last resort - P/E ratios, fallback for development/testing
 
 api_endpoints:
@@ -443,6 +479,23 @@ api_endpoints:
     auth: api_key
     rate_limit: 5 calls/minute (free tier)
     coverage: price data, market data, financial statements (10+ years)
+
+  sec_edgar:
+    base_url: https://data.sec.gov
+    auth: none (User-Agent header required)
+    rate_limit: 10 calls/second (FREE - no API key needed)
+    coverage: XBRL financial data, Form 4 insider transactions, SEC filings
+    key_endpoints:
+      - /api/xbrl/companyfacts/CIK{cik}.json - All XBRL financial data
+      - /api/xbrl/companyconcept/CIK{cik}/us-gaap/{tag}.json - Specific concept
+      - /submissions/CIK{cik}.json - Filing history, Form 4 links
+      - /files/company_tickers.json - Ticker to CIK mapping
+    unique_fields:
+      - Goodwill
+      - IntangibleAssetsNetExcludingGoodwill
+      - ResearchAndDevelopmentExpense
+      - SellingGeneralAndAdministrativeExpense
+      - Form 4 insider transactions
 
   financial_modeling_prep:
     base_url: https://financialmodelingprep.com/api/v3

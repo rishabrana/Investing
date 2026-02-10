@@ -128,10 +128,33 @@ class MetricsService:
             'economic_moat_score': 'moat',
             'consistency_score': 'moat',
             'piotroski_fscore': 'moat',
+            'gross_margin_stability': 'moat',
 
             # Growth
             'eps_growth': 'profitability',
             'book_value_per_share_growth': 'profitability',
+
+            # New Buffett/Munger Metrics
+            'gross_profit_margin': 'profitability',
+            'price_to_fcf': 'valuation',
+            'fcf_yield': 'valuation',
+            'long_term_debt_to_earnings': 'financial_strength',
+            'quality_of_earnings': 'profitability',
+            'altman_z_score': 'financial_strength',
+            'cash_conversion_cycle': 'cash_generation',
+            'graham_number': 'valuation',
+            'cash_return_on_invested_capital': 'profitability',
+            'debt_to_ebitda': 'financial_strength',
+            'net_debt_to_equity': 'financial_strength',
+            'accruals_ratio': 'profitability',
+            'asset_turnover': 'profitability',
+            'sustainable_growth_rate': 'profitability',
+            'capex_to_depreciation': 'cash_generation',
+            'sloan_ratio': 'profitability',
+            'rd_to_revenue': 'profitability',
+            'sga_to_gross_profit': 'profitability',
+            'goodwill_to_assets': 'financial_strength',
+            'return_on_tangible_equity': 'profitability',
         }
 
     def calculate_metrics(

@@ -6,6 +6,10 @@ import type {
   StockHistory,
   AddTickerRequest,
   ValidateTickerRequest,
+  ValidateTickersBatchRequest,
+  ValidateTickersBatchResponse,
+  AddTickersBatchRequest,
+  AddTickersBatchResponse,
   RefreshStockRequest,
   LogsResponse,
   ScreenerResponse,
@@ -40,6 +44,20 @@ export const watchlistApi = {
     request: ValidateTickerRequest
   ): Promise<{ is_valid: boolean; symbol: string; company_name: string | null; error: string | null }> => {
     const response = await api.post('/watchlist/validate', request);
+    return response.data;
+  },
+
+  validateTickersBatch: async (
+    request: ValidateTickersBatchRequest
+  ): Promise<ValidateTickersBatchResponse> => {
+    const response = await api.post('/watchlist/validate-batch', request);
+    return response.data;
+  },
+
+  addTickersBatch: async (
+    request: AddTickersBatchRequest
+  ): Promise<AddTickersBatchResponse> => {
+    const response = await api.post('/watchlist/add-batch', request);
     return response.data;
   },
 };

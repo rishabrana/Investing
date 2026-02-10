@@ -1,17 +1,27 @@
 """Watchlist management endpoints."""
 
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Optional
 
 from storage.json_store import JsonStore, Watchlist, WatchlistEntry
 from clients.polygon_client import PolygonClient
-from backend.api.dependencies import get_json_store, get_polygon_client
-from backend.models.requests import AddTickerRequest, ValidateTickerRequest
+from clients.sec_edgar_client import SECEdgarClient
+from backend.api.dependencies import get_json_store, get_polygon_client, get_sec_edgar_client
+from backend.models.requests import (
+    AddTickerRequest,
+    ValidateTickerRequest,
+    ValidateTickersBatchRequest,
+    AddTickersBatchRequest,
+)
 from backend.models.responses import (
     WatchlistResponse,
     TickerEntryResponse,
     AddTickerResponse,
     ValidateTickerResponse,
+    ValidateTickersBatchResponse,
+    AddTickerBatchResult,
+    AddTickersBatchResponse,
     RemoveTickerResponse,
 )
 
@@ -77,11 +87,13 @@ async def add_ticker(
     if watchlist is None:
         watchlist = Watchlist(tickers=[])
 
-    # Check if already exists
-    if any(entry.symbol == symbol for entry in watchlist.tickers):
-        raise HTTPException(
-            status_code=400,
-            detail=f"{symbol} is already in the watchlist"
+    # Silently skip if already exists
+    existing = next((entry for entry in watchlist.tickers if entry.symbol == symbol), None)
+    if existing:
+        return AddTickerResponse(
+            success=True,
+            message=f"{symbol} is already in the watchlist",
+            entry=_watchlist_entry_to_response(existing)
         )
 
     # Validate ticker if not skipped
@@ -168,36 +180,203 @@ async def remove_ticker(
     )
 
 
-@router.post("/validate", response_model=ValidateTickerResponse)
-async def validate_ticker(
-    request: ValidateTickerRequest,
-    polygon_client: Optional[PolygonClient] = Depends(get_polygon_client)
-):
+def _validate_ticker_with_fallback(
+    symbol: str,
+    polygon_client: Optional[PolygonClient],
+    sec_client: SECEdgarClient,
+) -> ValidateTickerResponse:
     """
-    Validate a ticker symbol.
+    Validate a ticker using Polygon (primary) with SEC EDGAR fallback.
 
-    Args:
-        request: ValidateTickerRequest with symbol
-
-    Returns:
-        ValidateTickerResponse with validation result
+    Falls back to SEC EDGAR when:
+    - No Polygon API key configured
+    - Polygon returns a rate limit error
+    - Polygon returns a non-404 error
     """
-    symbol = request.symbol.upper()
+    # Try Polygon first (has company names like "Apple Inc.")
+    if polygon_client is not None:
+        is_valid, company_name, error = polygon_client.validate_ticker(symbol)
+        if is_valid:
+            return ValidateTickerResponse(
+                is_valid=True,
+                symbol=symbol,
+                company_name=company_name,
+                error=None,
+            )
+        # Only trust a 404 as "definitely invalid"
+        if "does not exist" in error:
+            return ValidateTickerResponse(
+                is_valid=False,
+                symbol=symbol,
+                company_name=None,
+                error=error,
+            )
+        # For rate limits or other errors, fall through to SEC EDGAR
 
-    if polygon_client is None:
-        # No API key, skip validation
-        return ValidateTickerResponse(
-            is_valid=True,
-            symbol=symbol,
-            company_name=None,
-            error=None
-        )
-
-    is_valid, company_name, error = polygon_client.validate_ticker(symbol)
-
+    # Fallback: SEC EDGAR (free, no rate limit issues for validation)
+    is_valid, company_name, error = sec_client.validate_ticker(symbol)
     return ValidateTickerResponse(
         is_valid=is_valid,
         symbol=symbol,
         company_name=company_name if is_valid else None,
-        error=error if not is_valid else None
+        error=error if not is_valid else None,
+    )
+
+
+@router.post("/validate", response_model=ValidateTickerResponse)
+async def validate_ticker(
+    request: ValidateTickerRequest,
+    polygon_client: Optional[PolygonClient] = Depends(get_polygon_client),
+    sec_client: SECEdgarClient = Depends(get_sec_edgar_client),
+):
+    """Validate a single ticker symbol."""
+    symbol = request.symbol.upper()
+    return _validate_ticker_with_fallback(symbol, polygon_client, sec_client)
+
+
+@router.post("/validate-batch", response_model=ValidateTickersBatchResponse)
+async def validate_tickers_batch(
+    request: ValidateTickersBatchRequest,
+    store: JsonStore = Depends(get_json_store),
+    polygon_client: Optional[PolygonClient] = Depends(get_polygon_client),
+    sec_client: SECEdgarClient = Depends(get_sec_edgar_client),
+):
+    """
+    Validate multiple ticker symbols at once.
+
+    - Duplicates (already in watchlist) are skipped and marked valid.
+    - Uses Polygon.io with SEC EDGAR fallback for validation.
+    """
+    results: List[ValidateTickerResponse] = []
+    valid_count = 0
+    invalid_count = 0
+
+    # Load existing watchlist for duplicate detection
+    watchlist = store.load_watchlist("default")
+    existing_symbols = (
+        {entry.symbol for entry in watchlist.tickers} if watchlist else set()
+    )
+
+    for symbol in request.symbols:
+        symbol = symbol.strip().upper()
+        if not symbol:
+            continue
+
+        # Skip duplicates — mark as valid so UI can proceed
+        if symbol in existing_symbols:
+            results.append(ValidateTickerResponse(
+                is_valid=True,
+                symbol=symbol,
+                company_name=None,
+                error="already_in_watchlist",
+            ))
+            valid_count += 1
+            continue
+
+        # Brief pause between Polygon calls to reduce rate limiting
+        if polygon_client and results:
+            await asyncio.sleep(0.3)
+
+        result = _validate_ticker_with_fallback(symbol, polygon_client, sec_client)
+        results.append(result)
+        if result.is_valid:
+            valid_count += 1
+        else:
+            invalid_count += 1
+
+    return ValidateTickersBatchResponse(
+        results=results,
+        valid_count=valid_count,
+        invalid_count=invalid_count,
+    )
+
+
+@router.post("/add-batch", response_model=AddTickersBatchResponse)
+async def add_tickers_batch(
+    request: AddTickersBatchRequest,
+    store: JsonStore = Depends(get_json_store),
+    polygon_client: Optional[PolygonClient] = Depends(get_polygon_client)
+):
+    """
+    Add multiple tickers to the watchlist at once.
+
+    Args:
+        request: AddTickersBatchRequest with list of symbols
+
+    Returns:
+        AddTickersBatchResponse with results for each symbol
+    """
+    results: List[AddTickerBatchResult] = []
+    added_count = 0
+    failed_count = 0
+    skipped_count = 0
+
+    watchlist = store.load_watchlist("default")
+    if watchlist is None:
+        watchlist = Watchlist(tickers=[])
+
+    existing_symbols = {entry.symbol for entry in watchlist.tickers}
+
+    for symbol in request.symbols:
+        # Clean and normalize the symbol
+        symbol = symbol.strip().upper()
+
+        if not symbol:
+            continue
+
+        # Silently skip if already exists
+        if symbol in existing_symbols:
+            results.append(AddTickerBatchResult(
+                symbol=symbol,
+                success=True,
+                message=f"{symbol} is already in the watchlist",
+            ))
+            skipped_count += 1
+            continue
+
+        # Validate ticker if not skipped
+        company_name = symbol
+        if not request.skip_validation and polygon_client:
+            is_valid, validated_name, error = polygon_client.validate_ticker(symbol)
+            if not is_valid:
+                results.append(AddTickerBatchResult(
+                    symbol=symbol,
+                    success=False,
+                    message=f"Invalid ticker: {symbol}",
+                    error=error or "Validation failed"
+                ))
+                failed_count += 1
+                continue
+            if validated_name:
+                company_name = validated_name
+
+        # Create entry
+        entry = WatchlistEntry(
+            symbol=symbol,
+            name=company_name,
+            notes=None,
+            metrics_profile=None,
+            custom_fields={}
+        )
+
+        watchlist.tickers.append(entry)
+        existing_symbols.add(symbol)
+
+        results.append(AddTickerBatchResult(
+            symbol=symbol,
+            success=True,
+            message=f"Added {symbol} to watchlist",
+            company_name=company_name
+        ))
+        added_count += 1
+
+    # Save watchlist if any were added
+    if added_count > 0:
+        store.save_watchlist(watchlist, name="default")
+
+    return AddTickersBatchResponse(
+        results=results,
+        added_count=added_count,
+        failed_count=failed_count,
+        skipped_count=skipped_count
     )

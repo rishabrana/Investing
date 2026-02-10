@@ -185,6 +185,10 @@ async def get_stock_history(
         "total_debt": ("financials_history", "total_debt"),
         "operating_cash_flow": ("financials_history", "operating_cash_flow"),
         "capital_expenditure": ("financials_history", "capital_expenditure"),
+        "eps": ("financials_history", "eps"),
+        "earnings_per_share": ("financials_history", "eps"),
+        "book_value_per_share": ("financials_history", "book_value_per_share"),
+        "bvps": ("financials_history", "book_value_per_share"),
     }
 
     if metric not in metric_map:
@@ -235,6 +239,20 @@ async def get_stock_history(
             capex = record.get("capital_expenditure", 0)
             if ocf is not None:
                 value = ocf - (capex if capex else 0)
+
+        # Calculate EPS: Net Income / Shares Outstanding
+        elif field == "eps" and value is None:
+            net_income = record.get("net_income")
+            shares = record.get("shares_outstanding")
+            if net_income and shares:
+                value = net_income / shares
+
+        # Calculate Book Value Per Share: Shareholders Equity / Shares Outstanding
+        elif field == "book_value_per_share" and value is None:
+            equity = record.get("shareholders_equity")
+            shares = record.get("shares_outstanding")
+            if equity and shares:
+                value = equity / shares
 
         if period:
             data_points.append(

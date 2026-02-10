@@ -46,6 +46,33 @@ class RemoveTickerResponse(BaseModel):
     message: str
 
 
+class ValidateTickersBatchResponse(BaseModel):
+    """Response for POST /watchlist/validate-batch."""
+
+    results: List[ValidateTickerResponse]
+    valid_count: int
+    invalid_count: int
+
+
+class AddTickerBatchResult(BaseModel):
+    """Result for a single ticker in batch add."""
+
+    symbol: str
+    success: bool
+    message: str
+    company_name: Optional[str] = None
+    error: Optional[str] = None
+
+
+class AddTickersBatchResponse(BaseModel):
+    """Response for POST /watchlist/add-batch."""
+
+    results: List[AddTickerBatchResult]
+    added_count: int
+    failed_count: int
+    skipped_count: int
+
+
 class PriceData(BaseModel):
     """Stock price information."""
 
