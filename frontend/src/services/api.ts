@@ -84,12 +84,16 @@ export const stockApi = {
   },
 
   refreshStock: async (ticker: string, request: RefreshStockRequest = {}): Promise<any> => {
-    const response = await api.post(`/stocks/${ticker}/refresh`, request);
+    const response = await api.post(`/stocks/${ticker}/refresh`, request, {
+      timeout: 120000, // 2 min - single refresh may wait on Polygon rate limit
+    });
     return response.data;
   },
 
   refreshWatchlist: async (watchlist: string = 'default', force: boolean = false): Promise<any> => {
-    const response = await api.post('/stocks/refresh-watchlist', { watchlist, force });
+    const response = await api.post('/stocks/refresh-watchlist', { watchlist, force }, {
+      timeout: 600000, // 10 min - batch refresh is slow due to API rate limits
+    });
     return response.data;
   },
 };

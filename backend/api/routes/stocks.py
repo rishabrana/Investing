@@ -267,7 +267,7 @@ async def get_stock_history(
 
 
 @router.post("/{ticker}/refresh", response_model=RefreshStockResponse)
-async def refresh_stock(
+def refresh_stock(
     ticker: str,
     request: RefreshStockRequest = RefreshStockRequest(),
     store: JsonStore = Depends(get_json_store),
@@ -404,7 +404,7 @@ async def refresh_stock(
 
 
 @router.post("/refresh-watchlist", response_model=RefreshWatchlistResponse)
-async def refresh_watchlist(
+def refresh_watchlist(
     request: RefreshWatchlistRequest,
     store: JsonStore = Depends(get_json_store),
     data_service: DataIngestionService = Depends(get_data_ingestion_service),
@@ -449,8 +449,8 @@ async def refresh_watchlist(
                     RefreshResult(
                         ticker=ticker,
                         success=True,
-                        fields_fetched=result.fields_fetched,
-                        fields_missing=result.fields_missing,
+                        fields_fetched=len(result.fields_fetched),
+                        fields_missing=len(result.fields_missing),
                         errors=[]
                     )
                 )

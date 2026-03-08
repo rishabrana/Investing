@@ -1,6 +1,6 @@
 """Watchlist management endpoints."""
 
-import asyncio
+import time
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Optional
 
@@ -67,7 +67,7 @@ async def get_watchlist(
 
 
 @router.post("/add", response_model=AddTickerResponse)
-async def add_ticker(
+def add_ticker(
     request: AddTickerRequest,
     store: JsonStore = Depends(get_json_store),
     polygon_client: Optional[PolygonClient] = Depends(get_polygon_client)
@@ -224,7 +224,7 @@ def _validate_ticker_with_fallback(
 
 
 @router.post("/validate", response_model=ValidateTickerResponse)
-async def validate_ticker(
+def validate_ticker(
     request: ValidateTickerRequest,
     polygon_client: Optional[PolygonClient] = Depends(get_polygon_client),
     sec_client: SECEdgarClient = Depends(get_sec_edgar_client),
@@ -235,7 +235,7 @@ async def validate_ticker(
 
 
 @router.post("/validate-batch", response_model=ValidateTickersBatchResponse)
-async def validate_tickers_batch(
+def validate_tickers_batch(
     request: ValidateTickersBatchRequest,
     store: JsonStore = Depends(get_json_store),
     polygon_client: Optional[PolygonClient] = Depends(get_polygon_client),
@@ -275,7 +275,7 @@ async def validate_tickers_batch(
 
         # Brief pause between Polygon calls to reduce rate limiting
         if polygon_client and results:
-            await asyncio.sleep(0.3)
+            time.sleep(0.3)
 
         result = _validate_ticker_with_fallback(symbol, polygon_client, sec_client)
         results.append(result)
@@ -292,7 +292,7 @@ async def validate_tickers_batch(
 
 
 @router.post("/add-batch", response_model=AddTickersBatchResponse)
-async def add_tickers_batch(
+def add_tickers_batch(
     request: AddTickersBatchRequest,
     store: JsonStore = Depends(get_json_store),
     polygon_client: Optional[PolygonClient] = Depends(get_polygon_client)

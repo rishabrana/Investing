@@ -60,6 +60,7 @@ class FinancialDatasetsClient:
                 for field in requested
                 if field.startswith("financials.")
                 or field.startswith("cash_flow.")
+                or field.startswith("market_data.")
             }
             if needed_financial_fields:
                 fetched |= self._fetch_financials(
@@ -73,6 +74,19 @@ class FinancialDatasetsClient:
             msg = f"FinancialDatasets financials fetch failed for {ticker}: {exc}"
             logger.warning(msg)
             warnings.append(msg)
+
+        # Block C: Compute market_cap from price × shares_outstanding
+        if "market_data.market_cap" in requested and "market_data.market_cap" not in fetched:
+            shares = data.get("market_data", {}).get("shares_outstanding")
+            price_close = data.get("price", {}).get("close")
+            if shares and price_close:
+                data["market_data"]["market_cap"] = shares * price_close
+                source_metadata["market_data.market_cap"] = {
+                    "provider": "financial_datasets",
+                    "timestamp": "",
+                    "endpoint": "computed: price * shares_outstanding",
+                }
+                fetched.add("market_data.market_cap")
 
         return data, source_metadata, fetched, warnings
 
@@ -168,6 +182,13 @@ class FinancialDatasetsClient:
         if ebit_val is not None and da is not None:
             ebitda_val = ebit_val + da
 
+        # Derive pre_tax_income = net_income + income_tax_expense
+        net_income_val = income.get("net_income")
+        tax_expense_val = income.get("income_tax_expense")
+        pre_tax_income_val = None
+        if net_income_val is not None and tax_expense_val is not None:
+            pre_tax_income_val = net_income_val + tax_expense_val
+
         # Field mapping: (field_id, value, source_endpoint)
         # Income statement fields
         income_fields = {
@@ -179,6 +200,10 @@ class FinancialDatasetsClient:
             "financials.income_tax_expense": income.get("income_tax_expense"),
             "financials.interest_expense": income.get("interest_expense"),
             "financials.ebit": ebit_val,
+            "financials.cost_of_revenue": income.get("cost_of_revenue"),
+            "financials.selling_general_admin": income.get("selling_general_and_administrative_expenses"),
+            "financials.research_and_development": income.get("research_and_development"),
+            "financials.pre_tax_income": pre_tax_income_val,
         }
 
         # Balance sheet fields
@@ -191,6 +216,11 @@ class FinancialDatasetsClient:
             "financials.current_assets": balance.get("current_assets"),
             "financials.current_liabilities": balance.get("current_liabilities"),
             "financials.retained_earnings": balance.get("retained_earnings"),
+            "financials.accounts_receivable": balance.get("trade_and_non_trade_receivables"),
+            "financials.inventory": balance.get("inventory"),
+            "financials.accounts_payable": balance.get("trade_and_non_trade_payables"),
+            "financials.goodwill": balance.get("goodwill_and_intangible_assets"),
+            "market_data.shares_outstanding": balance.get("outstanding_shares"),
         }
 
         # Cash flow fields (capital_expenditure and dividends are negative in API)
@@ -200,6 +230,7 @@ class FinancialDatasetsClient:
             "financials.depreciation_amortization": da,
             "financials.ebitda": ebitda_val,
             "cash_flow.dividends_paid": cashflow.get("dividends_and_other_cash_distributions"),
+            "financials.share_based_compensation": cashflow.get("share_based_compensation"),
         }
 
         # Populate data dict and track fetched fields
@@ -219,7 +250,8 @@ class FinancialDatasetsClient:
         for field_id, value in balance_fields.items():
             if value is None or field_id not in requested:
                 continue
-            data["financials"][field_id.split(".", 1)[1]] = value
+            section, key = field_id.split(".", 1)
+            data[section][key] = value
             metadata[field_id] = {
                 "provider": "financial_datasets",
                 "timestamp": balance.get("report_period", ""),
@@ -279,6 +311,13 @@ class FinancialDatasetsClient:
                 "operating_cash_flow": cf.get("net_cash_flow_from_operations"),
                 "capital_expenditure": cf.get("capital_expenditure"),
                 "shares_outstanding": bal.get("outstanding_shares"),
+                "cost_of_revenue": inc.get("cost_of_revenue"),
+                "selling_general_admin": inc.get("selling_general_and_administrative_expenses"),
+                "research_and_development": inc.get("research_and_development"),
+                "accounts_receivable": bal.get("trade_and_non_trade_receivables"),
+                "inventory": bal.get("inventory"),
+                "accounts_payable": bal.get("trade_and_non_trade_payables"),
+                "goodwill": bal.get("goodwill_and_intangible_assets"),
             }
 
             # Derived margins
@@ -297,6 +336,7 @@ class FinancialDatasetsClient:
                 "capital_expenditure": cf.get("capital_expenditure"),
                 "dividends_paid": cf.get("dividends_and_other_cash_distributions"),
                 "free_cash_flow": cf.get("free_cash_flow"),
+                "share_based_compensation": cf.get("share_based_compensation"),
             }
             cash_flow_history.append(cf_hist)
 

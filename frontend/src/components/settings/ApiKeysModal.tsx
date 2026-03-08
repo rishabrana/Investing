@@ -17,6 +17,7 @@ interface ApiKey {
 }
 
 const API_PROVIDERS = [
+  { id: 'financial_datasets', name: 'FinancialDatasets.ai (Primary)', envVar: 'FINANCIAL_DATASETS_API_KEY' },
   { id: 'polygon.io', name: 'Polygon.io', envVar: 'POLYGON_API_KEY' },
   { id: 'financial_modeling_prep', name: 'Financial Modeling Prep', envVar: 'FMP_API_KEY' },
   { id: 'alpha_vantage', name: 'Alpha Vantage', envVar: 'ALPHA_VANTAGE_API_KEY' },

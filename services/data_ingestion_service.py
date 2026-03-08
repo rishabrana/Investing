@@ -87,6 +87,10 @@ class DataIngestionService:
             "financials.current_assets",
             "financials.current_liabilities",
             "financials.retained_earnings",
+            "financials.accounts_receivable",
+            "financials.inventory",
+            "financials.accounts_payable",
+            "financials.goodwill",
             # Income statement
             "financials.revenue",
             "financials.net_income",
@@ -98,10 +102,15 @@ class DataIngestionService:
             "financials.depreciation_amortization",
             "financials.ebit",
             "financials.ebitda",
+            "financials.cost_of_revenue",
+            "financials.selling_general_admin",
+            "financials.research_and_development",
+            "financials.pre_tax_income",
             # Cash flow
             "financials.operating_cash_flow",
             "financials.capital_expenditure",
             "cash_flow.dividends_paid",
+            "financials.share_based_compensation",
         }
 
     def refresh_ticker(

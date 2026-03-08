@@ -22,6 +22,8 @@ class PolygonClient:
             raise ValueError("Polygon API key is required")
         self.api_key = api_key
         self.session = session or requests.Session()
+        self._last_request_time = 0.0
+        self._min_request_interval = 12.0  # 5 calls/min = 1 call per 12s
 
     # -------- public API --------
 
@@ -138,12 +140,33 @@ class PolygonClient:
         url = f"{self.BASE_URL}{path}"
         params = params.copy() if params else {}
         params["apiKey"] = self.api_key
-        response = self.session.get(url, params=params, timeout=30)
+
+        # Rate limiting: wait if needed to respect free tier (5 calls/min)
+        elapsed = time.time() - self._last_request_time
+        if elapsed < self._min_request_interval:
+            wait = self._min_request_interval - elapsed
+            logger.debug(f"Rate limiting: waiting {wait:.1f}s before Polygon request")
+            time.sleep(wait)
+
+        for attempt in range(3):
+            response = self.session.get(url, params=params, timeout=30)
+            self._last_request_time = time.time()
+
+            if response.status_code == 429:
+                wait = (2 ** attempt) * 12  # 12s, 24s, 48s
+                logger.warning(f"Polygon rate limited on {path}, retrying in {wait}s...")
+                time.sleep(wait)
+                continue
+
+            response.raise_for_status()
+            payload = response.json()
+            if "status" in payload and payload["status"] != "OK":
+                raise RuntimeError(payload)
+            return payload
+
+        # Exhausted retries - raise the last response
         response.raise_for_status()
-        payload = response.json()
-        if "status" in payload and payload["status"] != "OK":
-            raise RuntimeError(payload)
-        return payload
+        return response.json()
 
     def _fetch_price(
         self,

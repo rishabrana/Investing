@@ -27,17 +27,19 @@ data_sources:
     field: low
     note: Not available from financial_datasets snapshot
 
-  # Market Data - Polygon.io
+  # Market Data
   market_data.market_cap:
-    primary: polygon.io
-    endpoint: /v3/reference/tickers/{ticker}
-    field: market_cap
+    primary: financial_datasets
+    secondary: polygon.io
+    endpoint: computed from price * shares_outstanding
+    note: Computed in client from price.close × outstanding_shares; Polygon has direct market_cap
 
   market_data.shares_outstanding:
-    primary: polygon.io
-    endpoint: /v3/reference/tickers/{ticker}
-    field: weighted_shares_outstanding
-    alternative_field: share_class_shares_outstanding
+    primary: financial_datasets
+    secondary: polygon.io
+    endpoint: /financials/balance-sheets
+    field: outstanding_shares
+    note: From balance sheet; Polygon uses weighted_shares_outstanding from ticker details
 
   market_data.trailing_pe:
     primary: yahoo_finance
@@ -100,25 +102,22 @@ data_sources:
     field: current_liabilities
 
   financials.accounts_receivable:
-    primary: polygon.io
-    endpoint: /vX/reference/financials
-    statement: balance_sheet
-    field: accounts_receivable
-    note: Not fetched by financial_datasets client
+    primary: financial_datasets
+    secondary: polygon.io
+    endpoint: /financials/balance-sheets
+    field: trade_and_non_trade_receivables
 
   financials.inventory:
-    primary: polygon.io
-    endpoint: /vX/reference/financials
-    statement: balance_sheet
+    primary: financial_datasets
+    secondary: polygon.io
+    endpoint: /financials/balance-sheets
     field: inventory
-    note: Not fetched by financial_datasets client
 
   financials.accounts_payable:
-    primary: polygon.io
-    endpoint: /vX/reference/financials
-    statement: balance_sheet
-    field: accounts_payable
-    note: Not fetched by financial_datasets client
+    primary: financial_datasets
+    secondary: polygon.io
+    endpoint: /financials/balance-sheets
+    field: trade_and_non_trade_payables
 
   financials.retained_earnings:
     primary: financial_datasets
@@ -127,29 +126,32 @@ data_sources:
     endpoint: /financials/balance-sheets
     field: retained_earnings
 
-  # SEC EDGAR XBRL Fields (FREE - not available from other APIs)
+  # SEC EDGAR XBRL Fields (fallback for fields also in financialdatasets.ai)
   financials.goodwill:
-    primary: sec_edgar
-    endpoint: /api/xbrl/companyfacts
-    xbrl_tag: Goodwill
+    primary: financial_datasets
+    secondary: sec_edgar
+    endpoint: /financials/balance-sheets
+    field: goodwill_and_intangible_assets
     note: Goodwill from acquisitions, used for ROTA/ROTE calculations
 
   financials.intangible_assets:
     primary: sec_edgar
     endpoint: /api/xbrl/companyfacts
     xbrl_tag: IntangibleAssetsNetExcludingGoodwill
-    note: Intangible assets excluding goodwill
+    note: Intangible assets excluding goodwill (not available from financial_datasets)
 
   financials.research_and_development:
-    primary: sec_edgar
-    endpoint: /api/xbrl/companyfacts
-    xbrl_tag: ResearchAndDevelopmentExpense
+    primary: financial_datasets
+    secondary: sec_edgar
+    endpoint: /financials/income-statements
+    field: research_and_development
     note: R&D expense for R&D to Revenue ratio
 
   financials.selling_general_admin:
-    primary: sec_edgar
-    endpoint: /api/xbrl/companyfacts
-    xbrl_tag: SellingGeneralAndAdministrativeExpense
+    primary: financial_datasets
+    secondary: sec_edgar
+    endpoint: /financials/income-statements
+    field: selling_general_and_administrative_expenses
     note: SG&A expense for SG&A to Gross Profit ratio
 
   insider.transactions:
@@ -195,11 +197,10 @@ data_sources:
     note: API returns singular 'operating_expense'; client maps to operating_expenses
 
   financials.cost_of_revenue:
-    primary: polygon.io
-    endpoint: /vX/reference/financials
-    statement: income_statement
+    primary: financial_datasets
+    secondary: polygon.io
+    endpoint: /financials/income-statements
     field: cost_of_revenue
-    note: Not fetched by financial_datasets client
 
   financials.income_tax_expense:
     primary: financial_datasets
@@ -208,11 +209,11 @@ data_sources:
     field: income_tax_expense
 
   metrics.ttm_eps:
-    primary: polygon.io
-    endpoint: /vX/reference/financials
-    statement: income_statement
-    field: basic_earnings_per_share
-    alternative_field: diluted_earnings_per_share
+    primary: financial_datasets
+    secondary: polygon.io
+    endpoint: /financials/income-statements
+    field: earnings_per_share_diluted
+    alternative_field: earnings_per_share
 
   financials.interest_expense:
     primary: financial_datasets
@@ -222,10 +223,10 @@ data_sources:
     field: interest_expense
 
   financials.pre_tax_income:
-    primary: polygon.io
+    primary: financial_datasets
+    secondary: polygon.io
     calculation: net_income + income_tax_expense
-    fallback: alpha_vantage
-    fallback_field: incomeBeforeTax
+    note: Derived in client from net_income + income_tax_expense
 
   financials.ebit:
     primary: financial_datasets
@@ -292,12 +293,18 @@ data_sources:
     calculation: dividends_paid / shares_outstanding
     note: Calculate from total dividends and shares outstanding
 
+  financials.share_based_compensation:
+    primary: financial_datasets
+    endpoint: /financials/cash-flow-statements
+    field: share_based_compensation
+    note: Stock-based compensation from cash flow statement
+
   # Cash Flow - Alpha Vantage Fallback
   financials.other_non_cash_charges:
     primary: alpha_vantage
     secondary: yahoo_finance
     endpoint: CASH_FLOW
-    note: Stock-based compensation, impairments, etc. from cash flow details
+    note: Other non-cash charges (impairments, etc.) from cash flow details
 
   # Historical Data - financial_datasets Primary (built from limit=10 responses)
   financials_history[].net_income:
